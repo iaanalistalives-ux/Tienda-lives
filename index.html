@@ -121,10 +121,10 @@ box-shadow:var(--sh);transition:transform .08s;}
 .opt.sel .pr{background:rgba(255,255,255,.22);color:#fff;}
 .opt .sw{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
 .opt.talla{min-width:62px;justify-content:center;font-size:16px;}
-.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start;}
 @media(max-width:1000px){.cols{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:560px){.cols{grid-template-columns:1fr;}}
-.colg{background:var(--warm-light);border-radius:10px;padding:10px;}
+.colg{background:var(--warm-light);border-radius:10px;padding:10px;align-self:start;}
 .colt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--stone);
 margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--warm);}
 .colg .opts{flex-direction:column;}
@@ -189,6 +189,7 @@ font-weight:700;cursor:pointer;font-size:16px;line-height:1;}
 .vh .acc button{font-size:12px;padding:5px 11px;border-radius:7px;border:1px solid var(--warm);
 background:#fff;color:var(--stone);cursor:pointer;font-family:inherit;font-weight:700;}
 .vh .acc button.corr{color:var(--sage);}
+.vh .acc button.cli2{color:var(--taupe);}
 .vh .acc button.anu{color:var(--rose);}
 .vh .acc button:hover{border-color:currentColor;}
 .chip .x{cursor:pointer;color:var(--stone);font-weight:700;padding:0 2px;border-radius:50%;}
@@ -310,15 +311,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="tot"><span style="font-weight:700">Total</span><span class="v" id="ctot">S/ 0.00</span></div>
               <div class="field" style="margin-bottom:10px"><label>Forma de pago</label>
                 <select id="pago"><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option><option>Transferencia</option></select></div>
-              <details class="cliente" id="detcli">
-                <summary>Datos del cliente (opcional)</summary>
-                <div class="campos">
-                  <input id="cliNom" type="text" placeholder="Nombre y apellido" autocomplete="off">
-                  <input id="cliDni" type="text" inputmode="numeric" maxlength="8" placeholder="DNI (8 números)" autocomplete="off">
-                  <input id="cliCel" type="text" inputmode="numeric" maxlength="9" placeholder="Celular (9 números)" autocomplete="off">
-                </div>
-                <div class="nota">Solo si el cliente quiere cambio o garantía. Si no, se deja vacío y la venta se registra igual.</div>
-              </details>
+
               <button class="btn primary" style="width:100%;padding:15px;font-size:17px" id="bcobrar" onclick="cobrar()" disabled>Cobrar</button>
               <button class="btn ghost" style="width:100%;margin-top:8px" onclick="vaciar()">Vaciar</button>
             </div>
@@ -454,6 +447,24 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   </div>
 </div>
 
+<div class="mback" id="mcli">
+  <div class="modal" style="max-width:440px">
+    <h3>Datos del cliente</h3>
+    <div class="sub" id="clisub">—</div>
+    <div class="field" style="margin-bottom:10px"><label>Nombre y apellido</label>
+      <input id="mcNom" type="text" placeholder="Opcional" autocomplete="off"></div>
+    <div class="frow">
+      <div class="field"><label>DNI</label>
+        <input id="mcDni" type="text" inputmode="numeric" maxlength="8" placeholder="8 números" autocomplete="off"></div>
+      <div class="field"><label>Celular</label>
+        <input id="mcCel" type="text" inputmode="numeric" maxlength="9" placeholder="9 números" autocomplete="off"></div>
+    </div>
+    <div class="ph">Se guarda sobre la venta ya cobrada. Sirve para cambios y garantías; si el cliente no lo quiere dar, se deja vacío.</div>
+    <div class="mact"><button class="btn ghost" onclick="cerrarCli()">Cancelar</button>
+      <button class="btn primary" id="mcBtn" onclick="guardarCli()">Guardar</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
@@ -550,7 +561,7 @@ async function cargarHoy(){
     const g={},ord=[];
     mapVentas(r.ventas).filter(function(v){return v.f===hoy;}).forEach(function(v){
       const k=v.tk||('sin-'+v.h);
-      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',lineas:[]};ord.push(k);}
+      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',lineas:[]};ord.push(k);}
       g[k].u+=v.q;g[k].t+=v.q*v.p;
       g[k].lineas.push({ma:v.ma,ca:v.ca,es:v.es,co:v.co,ta:v.ta,q:v.q,p:v.p});
     });
@@ -790,18 +801,18 @@ async function cobrar(){
   try{
     const r=await api({action:'venta',items:items,pago:document.getElementById('pago').value,
                        usuario:document.getElementById('usuario').value,
-                       cliente:cli('cliNom'),dni:cli('cliDni'),celular:cli('cliCel')});
+                       cliente:'',dni:'',celular:''});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
     CART.forEach(function(x){
       VENTAS.push({f:f,sku:'',ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,
-                   pago:document.getElementById('pago').value,h:r.hora||'',tk:r.ticket||'',cli:cli('cliNom')});
+                   pago:document.getElementById('pago').value,h:r.hora||'',tk:r.ticket||''});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
     HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,
-      pago:document.getElementById('pago').value,cli:cli('cliNom'),
+      pago:document.getElementById('pago').value,cli:'',dni:'',cel:'',
       lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0};})});
-    CART=[];alerta('');limpiaCliente();
+    CART=[];alerta('');
     pintaCart();pintaHoy();
     marcaEstado(true,'Guardado');
     toast('Venta cobrada: '+S(r.total||total)+' · '+unid+' prenda(s)');
@@ -813,10 +824,10 @@ async function cobrar(){
     ocupado=false;b.textContent='Cobrar';pintaCart();
   }
 }
-function cli(id){const e=document.getElementById(id);return e?e.value.trim():'';}
-function limpiaCliente(){
-  ['cliNom','cliDni','cliCel'].forEach(function(i){const e=document.getElementById(i);if(e)e.value='';});
-  const d=document.getElementById('detcli');if(d)d.open=false;
+function hhmm(x){
+  if(!x)return '';
+  const m=/(\d{1,2}):(\d{2})/.exec(String(x));
+  return m?('0'+m[1]).slice(-2)+':'+m[2]:'';
 }
 function pintaHoy(){
   const c=document.getElementById('hoy');
@@ -825,15 +836,45 @@ function pintaHoy(){
   c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm)">'+
   '<span>'+uu+' prendas hoy</span><span style="color:var(--taupe)">'+S(tt)+'</span></div>'+
   HOY.slice(0,20).map(function(v,i){
-    const acc=v.tk?('<div class="acc"><button class="corr" onclick="corregirVenta('+i+')">Corregir</button>'+
+    const acc=v.tk?('<div class="acc"><button class="cli2" onclick="abrirCli('+i+')">'+(v.cli||v.dni||v.cel?'✓ Cliente':'+ Cliente')+'</button>'+
+      '<button class="corr" onclick="corregirVenta('+i+')">Corregir</button>'+
       '<button class="anu" onclick="anularVenta2('+i+')">Anular</button></div>'):'';
     const det=(v.lineas&&v.lineas.length)?v.lineas.map(function(l){return l.q+' × '+ncat(l.ca)+' '+ncol(l.co)+' T'+l.ta;}).join(' · '):'';
     return '<div class="vh"><div class="l1"><span class="h">'+(v.h||'—')+' · '+v.u+' prenda(s)</span>'+
       '<span class="t">'+S(v.t)+'</span></div>'+
-      '<div class="l2">'+(v.pago||'')+(v.cli?' · '+v.cli:'')+(det?'<br>'+det:'')+'</div>'+acc+'</div>';
+      '<div class="l2">'+(v.pago||'')+(v.cli?' · <b>'+v.cli+'</b>':'')+(v.dni?' · DNI '+v.dni:'')+(det?'<br>'+det:'')+'</div>'+acc+'</div>';
   }).join('');
 }
 /* Corregir = anula la venta y devuelve las prendas al carrito para rehacerla. */
+let cliIdx=null;
+function abrirCli(i){
+  const v=HOY[i];if(!v||!v.tk)return;
+  cliIdx=i;
+  document.getElementById('clisub').textContent='Venta de las '+(hhmm(v.h)||'—')+' · '+v.u+' prenda(s) · '+S(v.t);
+  document.getElementById('mcNom').value=v.cli||'';
+  document.getElementById('mcDni').value=v.dni||'';
+  document.getElementById('mcCel').value=v.cel||'';
+  document.getElementById('mcli').classList.add('open');
+}
+function cerrarCli(){document.getElementById('mcli').classList.remove('open');cliIdx=null;}
+async function guardarCli(){
+  if(cliIdx===null)return;
+  const v=HOY[cliIdx];
+  const nom=document.getElementById('mcNom').value.trim();
+  const dni=document.getElementById('mcDni').value.replace(/\D/g,'');
+  const cel=document.getElementById('mcCel').value.replace(/\D/g,'');
+  if(dni&&dni.length!==8){toast('El DNI debe tener 8 números',true);return;}
+  if(cel&&cel.length!==9){toast('El celular debe tener 9 números',true);return;}
+  const b=document.getElementById('mcBtn');b.disabled=true;b.textContent='Guardando…';
+  try{
+    const r=await api({action:'cliente',ticket:v.tk,cliente:nom,dni:dni,celular:cel});
+    if(!r.ok)throw new Error(r.error||'No se pudo guardar');
+    v.cli=nom;v.dni=dni;v.cel=cel;
+    VENTAS.forEach(function(x){if(x.tk===v.tk){x.cli=nom;x.dni=dni;x.cel=cel;}});
+    cerrarCli();pintaHoy();toast(nom||dni||cel?'Datos del cliente guardados':'Datos del cliente borrados');
+  }catch(e){toast('No se pudo guardar: '+e.message,true);}
+  finally{b.disabled=false;b.textContent='Guardar';}
+}
 async function corregirVenta(i){
   const v=HOY[i];if(!v||!v.tk)return;
   if(!confirm('Se va a anular esta venta de '+S(v.t)+' y sus prendas volverán a la venta actual para que la haga de nuevo. ¿Continuar?'))return;
