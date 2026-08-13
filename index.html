@@ -131,6 +131,21 @@ margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--warm);}
 .colg .opt{width:100%;justify-content:space-between;font-size:13.5px;padding:10px 12px;}
 .buscacol{display:flex;gap:8px;align-items:center;margin-bottom:9px;}
 .buscacol input{flex:1;max-width:280px;}
+.colgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:9px;}
+@media(max-width:600px){.colgrid{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));}}
+.colop{background:#fff;border:2px solid var(--warm);border-radius:10px;padding:7px;cursor:pointer;
+box-shadow:var(--sh);text-align:center;transition:transform .08s;}
+.colop:hover{border-color:var(--sage);}
+.colop:active{transform:scale(.96);}
+.colop .mu{height:42px;border-radius:7px;border:1px solid rgba(0,0,0,.12);position:relative;}
+.colop .nb{font-size:12px;font-weight:700;color:#33413D;margin-top:5px;line-height:1.2;
+display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.colop.sel{border-color:var(--sage);background:#E7F4EF;}
+.colop.sel .mu::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;
+justify-content:center;font-size:20px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);}
+.colop.sel .nb{color:var(--sage-dark);}
+.colsep{grid-column:1/-1;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+color:var(--stone);border-bottom:1px solid var(--warm);padding-bottom:4px;margin-top:4px;}
 .addop{background:#fff;border:2px dashed var(--sage);color:var(--sage-dark);border-radius:10px;
 padding:11px 14px;cursor:pointer;font-size:14px;font-weight:700;min-height:46px;display:inline-flex;
 align-items:center;margin-top:9px;}
@@ -157,6 +172,27 @@ font-weight:700;cursor:pointer;font-size:16px;line-height:1;}
 .tot{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 10px;}
 .tot .v{font-size:30px;font-weight:700;color:var(--taupe);}
 .empty{color:var(--stone);font-size:13px;padding:16px 0;text-align:center;}
+.cliente{border-top:1px solid var(--warm);margin-top:10px;padding-top:10px;}
+.cliente summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--sage-dark);list-style:none;}
+.cliente summary::-webkit-details-marker{display:none;}
+.cliente summary::before{content:"▸ ";}
+.cliente[open] summary::before{content:"▾ ";}
+.cliente .campos{margin-top:10px;display:grid;gap:8px;}
+.cliente input{width:100%;}
+.cliente .nota{font-size:11px;color:var(--stone);margin-top:6px;}
+.vh{border-bottom:1px solid var(--warm-light);padding:9px 0;}
+.vh .l1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.vh .h{font-weight:700;font-size:13.5px;}
+.vh .t{font-weight:700;color:var(--taupe);}
+.vh .l2{font-size:11.5px;color:var(--stone);margin-top:2px;}
+.vh .acc{margin-top:6px;display:flex;gap:8px;}
+.vh .acc button{font-size:12px;padding:5px 11px;border-radius:7px;border:1px solid var(--warm);
+background:#fff;color:var(--stone);cursor:pointer;font-family:inherit;font-weight:700;}
+.vh .acc button.corr{color:var(--sage);}
+.vh .acc button.anu{color:var(--rose);}
+.vh .acc button:hover{border-color:currentColor;}
+.chip .x{cursor:pointer;color:var(--stone);font-weight:700;padding:0 2px;border-radius:50%;}
+.chip .x:hover{color:var(--rose);}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--petrol);color:#fff;
 padding:13px 24px;border-radius:10px;font-weight:700;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:90;
 opacity:0;pointer-events:none;transition:opacity .2s,bottom .2s;font-size:15px;max-width:90vw;text-align:center;}
@@ -274,12 +310,21 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="tot"><span style="font-weight:700">Total</span><span class="v" id="ctot">S/ 0.00</span></div>
               <div class="field" style="margin-bottom:10px"><label>Forma de pago</label>
                 <select id="pago"><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+              <details class="cliente" id="detcli">
+                <summary>Datos del cliente (opcional)</summary>
+                <div class="campos">
+                  <input id="cliNom" type="text" placeholder="Nombre y apellido" autocomplete="off">
+                  <input id="cliDni" type="text" inputmode="numeric" maxlength="8" placeholder="DNI (8 números)" autocomplete="off">
+                  <input id="cliCel" type="text" inputmode="numeric" maxlength="9" placeholder="Celular (9 números)" autocomplete="off">
+                </div>
+                <div class="nota">Solo si el cliente quiere cambio o garantía. Si no, se deja vacío y la venta se registra igual.</div>
+              </details>
               <button class="btn primary" style="width:100%;padding:15px;font-size:17px" id="bcobrar" onclick="cobrar()" disabled>Cobrar</button>
               <button class="btn ghost" style="width:100%;margin-top:8px" onclick="vaciar()">Vaciar</button>
             </div>
             <div class="panel" style="margin-top:14px">
               <div class="pt">Ventas de hoy</div>
-              <div class="ph">Cada cobro queda guardado en la nube al instante.</div>
+              <div class="ph">Cada cobro queda guardado al instante. Si se equivocó, use Corregir o Anular.</div>
               <div id="hoy"><div class="empty">Sin ventas todavía</div></div>
             </div>
           </div>
@@ -318,42 +363,18 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
 
       <!-- ============ CONFIG ============ -->
       <section id="v-cfg" style="display:none">
-        <div class="insight"><b>Esta pantalla se toca poco.</b> Solo cuando llega algo que no está en las listas de Vender. Todo lo que ya existe se ve aquí abajo, para no crear repetido. Lo que agregue aquí se guarda en la nube y aparece de inmediato al vender.</div>
-        <div class="grid">
-          <div class="panel col6">
-            <div class="pt">Tipos de prenda y sus precios <span class="pill neu" id="ccat"></span></div>
-            <div class="ph">Este es el único lugar donde se pone o se cambia un precio. Al vender aparece solo y no se puede modificar.</div>
-            <div class="tblwrap" style="max-height:320px"><table><thead><tr><th>Prenda</th><th>Para quién</th><th class="num">Precio</th></tr></thead><tbody id="tcat"></tbody></table></div>
-            <button class="btn primary" style="margin-top:12px" onclick="abrirAdd('cat')">+ Agregar tipo de prenda</button>
-            <div class="ph" style="margin-top:8px">Para cambiar un precio existente hay que editarlo en la hoja de Google (columna precio). Así queda registro de quién lo cambió.</div>
-          </div>
-          <div class="panel col6">
-            <div class="pt">Colores <span class="pill neu" id="ccol"></span></div>
-            <div class="ph">Los colores no tienen precio: el precio depende solo del tipo de prenda.</div>
-            <div class="chips" id="chcol"></div>
-            <button class="btn primary" style="margin-top:12px" onclick="abrirAdd('col')">+ Agregar color</button>
-          </div>
-          <div class="panel col4">
-            <div class="pt">Marcas <span class="pill neu" id="cmar"></span></div>
-            <div class="chips" id="chmar"></div>
-            <button class="btn primary" style="margin-top:12px" onclick="abrirAdd('mar')">+ Agregar marca</button>
-          </div>
-          <div class="panel col4">
-            <div class="pt">Estilos <span class="pill neu" id="cest"></span></div>
-            <div class="chips" id="chest"></div>
-            <button class="btn primary" style="margin-top:12px" onclick="abrirAdd('est')">+ Agregar estilo</button>
-          </div>
-          <div class="panel col4">
-            <div class="pt">Tallas <span class="pill neu" id="ctal"></span></div>
-            <div class="chips" id="chtal"></div>
-            <button class="btn primary" style="margin-top:12px" onclick="abrirAdd('tal')">+ Agregar talla</button>
-          </div>
-          <div class="panel col12">
-            <div class="pt">Códigos creados <span class="pill neu" id="cskus"></span></div>
-            <div class="ph">Cada combinación distinta recibe un código correlativo LT-XXXXXX. Se crea solo la primera vez que se vende; si se repite, se reutiliza el mismo.</div>
-            <button class="btn" id="bskus" onclick="verSkus()">Ver la lista de códigos</button>
-            <div class="tblwrap" style="max-height:320px;margin-top:10px"><table><thead><tr><th>Código</th><th>Prenda</th><th class="num">Precio</th></tr></thead><tbody id="tsku"></tbody></table></div>
-          </div>
+        <div class="insight">Los tipos de prenda, colores, marcas, estilos y tallas se agregan, modifican o quitan
+        desde la misma pantalla de <b>Vender</b>, con los botones punteados de cada paso. Aquí queda solo la lista de
+        códigos, para consultarla cuando haga falta.</div>
+        <div class="panel">
+          <div class="pt">Códigos creados <span class="pill neu" id="cskus"></span></div>
+          <div class="ph">Cada combinación distinta de marca, prenda, estilo, color y talla recibe un código correlativo
+          LT-XXXXXX. Se crea solo la primera vez que se vende; si esa misma combinación se repite, se reutiliza el mismo
+          código. Nadie escribe códigos a mano.</div>
+          <button class="btn" id="bskus" onclick="verSkus()">Ver la lista de códigos</button>
+          <input id="qsku" type="search" placeholder="Buscar prenda o código…" oninput="pintaCfg()" style="margin-left:8px;min-width:220px;display:none">
+          <div class="tblwrap" style="max-height:520px;margin-top:12px"><table><thead><tr><th>Código</th><th>Prenda</th><th class="num">Precio actual</th></tr></thead><tbody id="tsku"></tbody></table></div>
+          <div class="ph" id="skucount" style="margin-top:10px"></div>
         </div>
       </section>
 
@@ -512,7 +533,8 @@ function cargaCatalogos(d){
 }
 function mapVentas(rows){
   return (rows||[]).map(function(v){
-    return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10]};
+    return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||''};
   });
 }
 function recalcFechas(){
@@ -525,8 +547,14 @@ async function cargarHoy(){
     const r=await api({action:'ventas',desde:hoyISO()});
     if(!r.ok)return;
     const hoy=hoyISO();
-    HOY=mapVentas(r.ventas).filter(function(v){return v.f===hoy;})
-      .map(function(v){return {h:v.h||'',u:v.q,t:v.q*v.p,pago:v.pago||''};}).reverse();
+    const g={},ord=[];
+    mapVentas(r.ventas).filter(function(v){return v.f===hoy;}).forEach(function(v){
+      const k=v.tk||('sin-'+v.h);
+      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',lineas:[]};ord.push(k);}
+      g[k].u+=v.q;g[k].t+=v.q*v.p;
+      g[k].lineas.push({ma:v.ma,ca:v.ca,es:v.es,co:v.co,ta:v.ta,q:v.q,p:v.p});
+    });
+    HOY=ord.map(function(k){return g[k];}).reverse();
     pintaHoy();
   }catch(e){}
 }
@@ -571,7 +599,6 @@ async function recargar(){
     cargarHoy();
     if(document.getElementById('v-reg').style.display!=='none')pintaReg();
     if(document.getElementById('v-dash').style.display!=='none')pintaDash();
-    if(document.getElementById('v-cfg').style.display!=='none')pintaCfg();
     marcaEstado(true,'Actualizado');toast('Datos actualizados');
   }catch(e){marcaEstado(false,'Sin conexión');toast('No se pudo actualizar: '+e.message,true);}
 }
@@ -640,19 +667,54 @@ function pintaPasos(){
   H+=stepHTML(4,'Color',sel.co?ncol(sel.co):'',
      '<div class="buscacol"><input id="bcol" type="search" placeholder="Escriba el color: ne, beig, azul…" '+
      'oninput="filtraColor(this.value)" value="'+fcol+'"><span style="font-size:12px;color:var(--stone)" id="ccolh"></span></div>'+
-     '<div class="opts" id="optsCol"></div><div class="addop" onclick="abrirAdd(\'col\',1)">+ Color que no está</div>');
+     '<div class="colgrid" id="optsCol"></div><div class="addop" onclick="abrirAdd(\'col\',1)">+ Color que no está</div>');
   H+=stepHTML(5,'Talla',sel.ta?'Talla '+sel.ta:'',
      '<div class="opts">'+TAL.map(function(t){return optOne({v:t,l:t,talla:1},'ta');}).join('')+
      '</div><div class="addop" onclick="abrirAdd(\'tal\',1)">+ Talla que no está</div>');
   document.getElementById('pasos').innerHTML=H;
   pintaCol();pintaResumen();
 }
+/* Ordena los colores por tono: primero los neutros de claro a oscuro,
+   después los de color siguiendo el arcoíris. Así los parecidos quedan
+   juntos y el ojo los encuentra sin leer. Funciona también con los
+   colores que agregue Rosa más adelante. */
+function hsl(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'').trim());
+  if(!m)return {h:0,s:0,l:.5};
+  const n=parseInt(m[1],16),r=((n>>16)&255)/255,g=((n>>8)&255)/255,b=(n&255)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,L=(mx+mn)/2;
+  let H=0,Sa=0;
+  if(d){
+    Sa=L>.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r)H=((g-b)/d+(g<b?6:0));else if(mx===g)H=((b-r)/d+2);else H=((r-g)/d+4);
+    H*=60;
+  }
+  return {h:H,s:Sa,l:L};
+}
+function ordenaColores(l){
+  const neu=[],cro=[];
+  l.forEach(function(c){const x=hsl(c[2]);(x.s<0.15?neu:cro).push([c,x]);});
+  neu.sort(function(a,b){return b[1].l-a[1].l;});
+  cro.sort(function(a,b){return a[1].h-b[1].h||b[1].l-a[1].l;});
+  return {neu:neu.map(function(x){return x[0];}),cro:cro.map(function(x){return x[0];})};
+}
+function colHTML(c){
+  return '<div class="colop'+(sel.co===c[0]?' sel':'')+'" onclick="pick(\'co\',\''+c[0]+'\')" title="'+c[1]+'">'+
+    '<div class="mu" style="background:'+c[2]+'"></div><span class="nb">'+c[1]+'</span></div>';
+}
 function pintaCol(){
   const q=fcol.trim().toLowerCase();
   const l=COL.filter(function(c){return !q||c[1].toLowerCase().indexOf(q)>=0;});
   const cont=document.getElementById('optsCol');if(!cont)return;
-  cont.innerHTML=l.length?l.map(function(c){return optOne({v:c[0],l:c[1],hex:c[2]},'co');}).join('')
-    :'<div style="color:var(--stone);font-size:13.5px;padding:8px 0">No hay ningún color con esas letras. Use el botón de abajo para agregarlo.</div>';
+  if(!l.length){
+    cont.innerHTML='<div style="color:var(--stone);font-size:13.5px;padding:8px 0;grid-column:1/-1">No hay ningún color con esas letras. Use el botón de abajo para agregarlo.</div>';
+  }else{
+    const o=ordenaColores(l);
+    let H='';
+    if(o.neu.length)H+='<div class="colsep">Blancos, grises y negros</div>'+o.neu.map(colHTML).join('');
+    if(o.cro.length)H+='<div class="colsep">Con color</div>'+o.cro.map(colHTML).join('');
+    cont.innerHTML=H;
+  }
   const hh=document.getElementById('ccolh');
   if(hh)hh.textContent=q?l.length+' de '+COL.length+' colores':COL.length+' colores';
 }
@@ -727,16 +789,19 @@ async function cobrar(){
   const unid=CART.reduce(function(a,x){return a+x.q;},0);
   try{
     const r=await api({action:'venta',items:items,pago:document.getElementById('pago').value,
-                       usuario:document.getElementById('usuario').value});
+                       usuario:document.getElementById('usuario').value,
+                       cliente:cli('cliNom'),dni:cli('cliDni'),celular:cli('cliCel')});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
     CART.forEach(function(x){
       VENTAS.push({f:f,sku:'',ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,
-                   pago:document.getElementById('pago').value,h:r.hora||''});
+                   pago:document.getElementById('pago').value,h:r.hora||'',tk:r.ticket||'',cli:cli('cliNom')});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
-    HOY.unshift({h:r.hora||'',u:unid,t:r.total||total,pago:document.getElementById('pago').value});
-    CART=[];alerta('');
+    HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,
+      pago:document.getElementById('pago').value,cli:cli('cliNom'),
+      lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0};})});
+    CART=[];alerta('');limpiaCliente();
     pintaCart();pintaHoy();
     marcaEstado(true,'Guardado');
     toast('Venta cobrada: '+S(r.total||total)+' · '+unid+' prenda(s)');
@@ -748,14 +813,54 @@ async function cobrar(){
     ocupado=false;b.textContent='Cobrar';pintaCart();
   }
 }
+function cli(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function limpiaCliente(){
+  ['cliNom','cliDni','cliCel'].forEach(function(i){const e=document.getElementById(i);if(e)e.value='';});
+  const d=document.getElementById('detcli');if(d)d.open=false;
+}
 function pintaHoy(){
   const c=document.getElementById('hoy');
   if(!HOY.length){c.innerHTML='<div class="empty">Sin ventas todavía</div>';return;}
   const tt=HOY.reduce(function(a,v){return a+v.t;},0),uu=HOY.reduce(function(a,v){return a+v.u;},0);
   c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm)">'+
   '<span>'+uu+' prendas hoy</span><span style="color:var(--taupe)">'+S(tt)+'</span></div>'+
-  HOY.slice(0,15).map(function(v){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--warm-light);font-size:13px">'+
-  '<span>'+(v.h||'—')+' · '+v.u+' prenda(s)'+(v.pago?' · '+v.pago:'')+'</span><span style="font-weight:700">'+S(v.t)+'</span></div>';}).join('');
+  HOY.slice(0,20).map(function(v,i){
+    const acc=v.tk?('<div class="acc"><button class="corr" onclick="corregirVenta('+i+')">Corregir</button>'+
+      '<button class="anu" onclick="anularVenta2('+i+')">Anular</button></div>'):'';
+    const det=(v.lineas&&v.lineas.length)?v.lineas.map(function(l){return l.q+' × '+ncat(l.ca)+' '+ncol(l.co)+' T'+l.ta;}).join(' · '):'';
+    return '<div class="vh"><div class="l1"><span class="h">'+(v.h||'—')+' · '+v.u+' prenda(s)</span>'+
+      '<span class="t">'+S(v.t)+'</span></div>'+
+      '<div class="l2">'+(v.pago||'')+(v.cli?' · '+v.cli:'')+(det?'<br>'+det:'')+'</div>'+acc+'</div>';
+  }).join('');
+}
+/* Corregir = anula la venta y devuelve las prendas al carrito para rehacerla. */
+async function corregirVenta(i){
+  const v=HOY[i];if(!v||!v.tk)return;
+  if(!confirm('Se va a anular esta venta de '+S(v.t)+' y sus prendas volverán a la venta actual para que la haga de nuevo. ¿Continuar?'))return;
+  const ok=await mandarAnular(v.tk);
+  if(!ok)return;
+  (v.lineas||[]).forEach(function(l){
+    const c=NCAT[l.ca];if(!c)return;
+    CART.push({ma:l.ma,ca:l.ca,es:l.es,co:l.co,ta:l.ta,q:l.q,precio:c[2]});
+  });
+  HOY.splice(i,1);pintaCart();pintaHoy();
+  toast('Venta anulada. Las prendas volvieron a la venta actual.');
+}
+async function anularVenta2(i){
+  const v=HOY[i];if(!v||!v.tk)return;
+  if(!confirm('¿Anular esta venta de '+S(v.t)+'? La línea no se borra: queda marcada como anulada en la hoja.'))return;
+  const ok=await mandarAnular(v.tk);
+  if(!ok)return;
+  HOY.splice(i,1);pintaHoy();toast('Venta anulada');
+}
+async function mandarAnular(tk){
+  marcaEstado(null,'Anulando…');
+  try{
+    const r=await api({action:'anular',ticket:tk,usuario:document.getElementById('usuario').value});
+    if(!r.ok)throw new Error(r.error||'No se pudo anular');
+    VENTAS=VENTAS.filter(function(x){return x.tk!==tk;});
+    marcaEstado(true,'Conectado');return true;
+  }catch(e){marcaEstado(false,'Error');toast('No se pudo anular: '+e.message,true);return false;}
 }
 
 /* ================= registro ================= */
@@ -804,30 +909,100 @@ function exportar(){
 
 /* ================= configuración ================= */
 function pintaCfg(){
-  document.getElementById('ccat').textContent=CAT.length;
-  document.getElementById('ccol').textContent=COL.length;
-  document.getElementById('cmar').textContent=MAR.length;
-  document.getElementById('cest').textContent=EST.length;
-  document.getElementById('ctal').textContent=TAL.length;
-  document.getElementById('tcat').innerHTML=CAT.map(function(c){
-    return '<tr><td style="font-weight:700">'+c[1]+'</td><td>'+(c[3]||'Sin género')+'</td><td class="num">'+S(c[2])+'</td></tr>';}).join('');
-  document.getElementById('chcol').innerHTML=COL.map(function(c){
-    return '<span class="chip"><span class="sw" style="background:'+c[2]+'"></span>'+c[1]+'</span>';}).join('');
-  document.getElementById('chmar').innerHTML=MAR.map(function(m){return '<span class="chip">'+m[1]+'</span>';}).join('');
-  document.getElementById('chest').innerHTML=EST.map(function(e){return '<span class="chip">'+e[1]+'</span>';}).join('');
-  document.getElementById('chtal').innerHTML=TAL.map(function(t){return '<span class="chip">'+t+'</span>';}).join('');
   const ks=Object.keys(SKU);
   document.getElementById('cskus').textContent=ks.length?N(ks.length):'sin cargar';
-  document.getElementById('tsku').innerHTML=ks.slice(0,400).map(function(k){
+  const q=(document.getElementById('qsku').value||'').trim().toLowerCase();
+  let l=ks;
+  if(q)l=ks.filter(function(k){
+    const p=k.split('|'),o={ma:p[0],ca:p[1],es:p[2],co:p[3],ta:p[4]};
+    return (SKU[k]+' '+descP(o)).toLowerCase().indexOf(q)>=0;});
+  document.getElementById('tsku').innerHTML=l.slice(0,400).map(function(k){
     const p=k.split('|'),o={ma:p[0],ca:p[1],es:p[2],co:p[3],ta:p[4]},c=NCAT[p[1]];
     return '<tr><td style="font-weight:700">'+SKU[k]+'</td><td>'+descP(o)+'</td><td class="num">'+(c?S(c[2]):'—')+'</td></tr>';}).join('');
+  document.getElementById('skucount').textContent=ks.length?('Mostrando '+Math.min(l.length,400)+' de '+N(l.length)+' códigos.'):'';
+}
+/* Lista de lo que ya existe, dentro del cuadro de agregar:
+   el lápiz modifica, la equis quita. */
+function pintaExistentes(){
+  const cont=document.getElementById('aexist');
+  if(!cont||editando||!addTipo)return;
+  const t=addTipo;
+  const items=t==='cat'?CAT.map(function(c){return {c:c[0],n:c[1]+' — '+S(c[2])+' · '+(c[3]||'Sin género'),hex:null};}):
+    t==='col'?COL.map(function(c){return {c:c[0],n:c[1],hex:c[2]};}):
+    t==='mar'?MAR.map(function(m){return {c:m[0],n:m[1],hex:null};}):
+    t==='est'?EST.map(function(e){return {c:e[0],n:e[1],hex:null};}):
+    TAL.map(function(x){return {c:x,n:x,hex:null};});
+  cont.innerHTML='<div class="field"><label>Ya existe ('+items.length+') — el lápiz modifica, la equis quita</label>'+
+    '<div class="chips" style="max-height:190px;overflow:auto">'+items.map(function(o){
+      const sw=o.hex?'<span class="sw" style="background:'+o.hex+'"></span>':'';
+      const lap=(t==='tal')?'':'<span class="x" style="color:var(--sage)" onclick="editar2(\''+t+'\',\''+o.c+'\')">✎</span>';
+      return '<span class="chip">'+sw+o.n+lap+
+        '<span class="x" onclick="quitar2(\''+t+'\',\''+o.c+'\',\''+esc(o.n)+'\')">✕</span></span>';
+    }).join('')+'</div></div>';
+}
+function esc(s){return String(s).replace(/'/g,"\\'");}
+let editando=null;
+function editar2(tipo,codigo){
+  const l=tipo==='cat'?NCAT[codigo]:tipo==='col'?NCOL[codigo]:tipo==='mar'?NMAR[codigo]:NEST[codigo];
+  if(!l)return;
+  editando={tipo:tipo,codigo:codigo};addTipo=tipo;addVenta=0;
+  document.getElementById('atit').textContent='Modificar '+ADD[tipo][0];
+  document.getElementById('alab').textContent=ADD[tipo][1];
+  document.getElementById('asub').textContent='El código interno ('+codigo+') no cambia, para no romper el historial de ventas. Las ventas ya registradas conservan el precio con el que se cobraron.';
+  document.getElementById('aexist').innerHTML='';
+  document.getElementById('aprecw').style.display=(tipo==='cat'?'':'none');
+  document.getElementById('agenw').style.display=(tipo==='cat'?'':'none');
+  document.getElementById('acolw').style.display=(tipo==='col'?'':'none');
+  document.getElementById('aval').value=l[1];
+  if(tipo==='cat'){document.getElementById('aprec').value=l[2];document.getElementById('agen').value=l[3]||'Sin género';}
+  if(tipo==='col')document.getElementById('acol').value=/^#[0-9a-f]{6}$/i.test(l[2])?l[2]:'#888888';
+  document.getElementById('madd').classList.add('open');
+}
+async function quitar2(tipo,codigo,nombre){
+  if(!confirm('¿Quitar "'+nombre+'" de la lista?\n\nSi ya se usó en alguna venta no se borra: queda desactivado y deja de aparecer al vender. El historial no se toca.'))return;
+  marcaEstado(null,'Quitando…');
+  try{
+    const r=await api({action:'eliminar',tipo:tipo,codigo:codigo});
+    if(!r.ok)throw new Error(r.error||'No se pudo quitar');
+    if(tipo==='cat')CAT=CAT.filter(function(c){return c[0]!==codigo;});
+    else if(tipo==='col')COL=COL.filter(function(c){return c[0]!==codigo;});
+    else if(tipo==='mar')MAR=MAR.filter(function(m){return m[0]!==codigo;});
+    else if(tipo==='est')EST=EST.filter(function(e){return e[0]!==codigo;});
+    else TAL=TAL.filter(function(t){return t!==codigo;});
+    ['ca','co','ma','es','ta'].forEach(function(k){if(sel[k]===codigo)sel[k]=null;});
+    reindex();pintaPasos();pintaExistentes();
+    marcaEstado(true,'Conectado');
+    toast(r.mensaje||'Quitado');
+  }catch(e){marcaEstado(false,'Error');toast('No se pudo quitar: '+e.message,true);}
+}
+async function guardarEdicion(v){
+  const p={action:'editar',tipo:editando.tipo,codigo:editando.codigo,nombre:v};
+  if(editando.tipo==='cat'){
+    const pr=parseFloat(document.getElementById('aprec').value);
+    if(!(pr>0)){toast('Ponga el precio de venta');return;}
+    p.precio=pr;p.genero=document.getElementById('agen').value;
+  }
+  if(editando.tipo==='col')p.hex=document.getElementById('acol').value;
+  const b=document.getElementById('abtn');b.disabled=true;b.textContent='Guardando…';
+  try{
+    const r=await api(p);
+    if(!r.ok)throw new Error(r.error||'No se pudo guardar');
+    const l=editando.tipo==='cat'?NCAT[editando.codigo]:editando.tipo==='col'?NCOL[editando.codigo]:
+            editando.tipo==='mar'?NMAR[editando.codigo]:NEST[editando.codigo];
+    l[1]=(editando.tipo==='cat'?v.toUpperCase():v);
+    if(editando.tipo==='cat'){l[2]=p.precio;l[3]=p.genero;}
+    if(editando.tipo==='col')l[2]=p.hex;
+    cerrarAdd();pintaPasos();toast('Modificado: '+v);
+  }catch(e){toast('No se pudo guardar: '+e.message,true);}
+  finally{b.disabled=false;b.textContent='Guardar';}
 }
 async function verSkus(){
   const b=document.getElementById('bskus');b.disabled=true;b.textContent='Cargando…';
   try{
     const r=await api({action:'skus'});
     if(!r.ok)throw new Error(r.error);
-    SKU=r.skus||{};pintaCfg();b.style.display='none';
+    SKU=r.skus||{};b.style.display='none';
+    document.getElementById('qsku').style.display='';pintaCfg();
   }catch(e){toast('No se pudo cargar: '+e.message,true);b.disabled=false;b.textContent='Ver la lista de códigos';}
 }
 const ADD={cat:['tipo de prenda','Nombre del tipo de prenda','Se agregará a la lista del paso 2 al vender, con su precio.'],
@@ -836,7 +1011,7 @@ const ADD={cat:['tipo de prenda','Nombre del tipo de prenda','Se agregará a la 
  est:['estilo','Nombre del estilo','Se agregará a la lista del paso 3.'],
  tal:['talla','Nombre de la talla','Se agregará a la lista del paso 5.']};
 function abrirAdd(t,desdeVenta){
-  addTipo=t;addVenta=desdeVenta?1:0;const a=ADD[t];
+  addTipo=t;addVenta=desdeVenta?1:0;editando=null;const a=ADD[t];
   document.getElementById('atit').textContent='Agregar '+a[0];
   document.getElementById('alab').textContent=a[1];
   document.getElementById('asub').textContent=a[2]+' Primero revise si ya existe en la lista de abajo.';
@@ -844,17 +1019,14 @@ function abrirAdd(t,desdeVenta){
   document.getElementById('agenw').style.display=(t==='cat'?'':'none');
   document.getElementById('acolw').style.display=(t==='col'?'':'none');
   document.getElementById('aval').value='';document.getElementById('aprec').value='';
-  const lst=t==='cat'?CAT.map(function(c){return c[1]+' — '+S(c[2]);}):
-    t==='col'?COL.map(function(c){return c[1];}):t==='mar'?MAR.map(function(m){return m[1];}):
-    t==='est'?EST.map(function(e){return e[1];}):TAL;
-  document.getElementById('aexist').innerHTML='<div class="field"><label>Ya existe ('+lst.length+')</label>'+
-    '<div class="chips" style="max-height:150px;overflow:auto">'+lst.map(function(x){return '<span class="chip">'+x+'</span>';}).join('')+'</div></div>';
+  pintaExistentes();
   document.getElementById('madd').classList.add('open');
 }
-function cerrarAdd(){document.getElementById('madd').classList.remove('open');}
+function cerrarAdd(){document.getElementById('madd').classList.remove('open');editando=null;}
 async function guardarAdd(){
   const v=document.getElementById('aval').value.trim();
   if(v.length<2){toast('Escriba el nombre');return;}
+  if(editando)return guardarEdicion(v);
   const p={action:'agregar',tipo:addTipo,nombre:v};
   if(addTipo==='cat'){
     const pr=parseFloat(document.getElementById('aprec').value);
@@ -876,9 +1048,7 @@ async function guardarAdd(){
       if(addTipo==='cat')sel.ca=r.codigo;else if(addTipo==='col'){sel.co=r.codigo;fcol='';}
       else if(addTipo==='mar')sel.ma=r.codigo;else if(addTipo==='est')sel.es=r.codigo;else sel.ta=r.codigo;
     }
-    cerrarAdd();pintaPasos();llenaFiltros();
-    if(document.getElementById('v-cfg').style.display!=='none')pintaCfg();
-    toast('Agregado: '+v);
+    cerrarAdd();pintaPasos();llenaFiltros();toast('Agregado: '+v);
   }catch(e){toast('No se pudo guardar: '+e.message,true);}
   finally{b.disabled=false;b.textContent='Guardar';}
 }
