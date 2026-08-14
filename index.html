@@ -429,7 +429,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         <div class="panel">
           <div class="pt">Registro de ventas</div>
           <div class="ph">Todo lo vendido, incluido el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Al abrir se cargan los últimos 90 días; con "Cargar todo el historial" se ve desde el inicio. Se muestran las 400 líneas más recientes del filtro.</div>
-          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Tipo de cliente</th></tr></thead><tbody id="treg"></tbody></table></div>
+          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Tipo de cliente</th><th></th></tr></thead><tbody id="treg"></tbody></table></div>
           <div class="ph" id="regcount" style="margin-top:10px"></div>
         </div>
       </section>
@@ -598,6 +598,45 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   </div>
 </div>
 
+<div class="mback" id="mcorr">
+  <div class="modal" style="max-width:480px">
+    <h3>Corregir línea de venta</h3>
+    <div class="sub" id="corrSub">—</div>
+    <div class="frow">
+      <div class="field"><label>Cantidad</label>
+        <input id="corrCant" type="number" min="1" style="font-size:18px;font-weight:700;text-align:center"></div>
+      <div class="field"><label>Precio unitario (S/)</label>
+        <input id="corrPre" type="number" min="0" step="0.5" style="font-size:18px;font-weight:700;text-align:center"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label>Tipo de cliente</label>
+        <select id="corrTipo" onchange="corrCambiaTipo()">
+          <option value="Publico">Público (cliente externo)</option>
+          <option value="Empleado">Empleado</option>
+          <option value="Obrero">Obrero</option>
+        </select></div>
+      <div class="field"><label>Forma de pago</label>
+        <select id="corrPago">
+          <option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option>
+          <option>Transferencia</option><option>Descuento por planilla</option>
+        </select></div>
+    </div>
+    <div class="exclu" id="corrExc" onclick="corrToggleExc()" style="margin-bottom:12px">
+      <div class="sw2"><span></span></div>
+      <div><div class="t1">Precio exclusivo</div>
+      <div class="t2">Marca que esta venta tuvo un descuento especial.</div></div>
+    </div>
+    <div class="ph" id="corrNota" style="margin-bottom:14px"></div>
+    <div class="mact" style="justify-content:space-between">
+      <button class="btn" style="color:var(--rose)" onclick="anularLineaReg()">Anular esta línea</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" onclick="cerrarCorr()">Cancelar</button>
+        <button class="btn primary" id="corrBtn" onclick="guardarCorr()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="mback" id="mcli">
   <div class="modal" style="max-width:440px">
     <h3>Datos del cliente</h3>
@@ -701,7 +740,8 @@ function cargaCatalogos(d){
 function mapVentas(rows){
   return (rows||[]).map(function(v,i){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||'',_i:i};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||'',
+            id:v[18]||0,_i:i};
   });
 }
 function recalcFechas(){
@@ -1228,12 +1268,81 @@ function pintaReg(){
     '<div class="kpi"><div class="l">Prendas vendidas</div><div class="row"><span class="v">'+N(uni)+'</span></div><div class="s">suma de cantidades</div></div>'+
     '<div class="kpi"><div class="l">Precio promedio</div><div class="row"><span class="v">'+S(uni?ing/uni:0)+'</span></div><div class="s">ingreso ÷ unidades (ponderado)</div></div>';
   document.getElementById('treg').innerHTML=r.slice(0,400).map(function(v){
-    return '<tr><td>'+v.f+'</td><td>'+(v.h||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
+    return '<tr><td>'+v.f+'</td><td>'+(hhmm(v.h)||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
     '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
-      (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
+      (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td>'+
+    '<td class="num">'+(v.id?'<button class="btn" style="padding:4px 10px;font-size:12px" onclick="abrirCorr('+v.id+')">Corregir</button>':'')+'</td></tr>';}).join('');
   document.getElementById('regcount').textContent='Mostrando '+Math.min(r.length,400)+' de '+N(r.length)+' líneas.';
+}
+/* ==== corregir una línea desde el registro ==== */
+let corrId=null,corrExclusivo=false;
+function abrirCorr(id){
+  const v=VENTAS.find(function(x){return x.id===id;});
+  if(!v)return;
+  corrId=id;
+  document.getElementById('corrSub').innerHTML=v.f+(v.h?' · '+hhmm(v.h):'')+' · <b>'+descP(v)+'</b>';
+  document.getElementById('corrCant').value=v.q;
+  document.getElementById('corrPre').value=v.p;
+  document.getElementById('corrTipo').value=(v.modo&&['Publico','Empleado','Obrero'].indexOf(v.modo)>=0)?v.modo:'Publico';
+  document.getElementById('corrPago').value=v.pago||'Efectivo';
+  corrExclusivo=(v.exc==='SI');
+  document.getElementById('corrExc').className='exclu'+(corrExclusivo?' on':'');
+  corrCambiaTipo();
+  document.getElementById('corrNota').innerHTML=
+    (v.lista>0?'Precio de lista: <b>'+S(v.lista)+'</b>. No se puede cobrar más que eso. ':'')+
+    'El tipo de cliente, el pago y el precio exclusivo se aplican a <b>toda la venta</b>, no solo a esta prenda. '+
+    'Si lo que está mal es la prenda, el color o la talla, anule la línea y vuelva a registrarla.';
+  document.getElementById('mcorr').classList.add('open');
+}
+function corrToggleExc(){
+  corrExclusivo=!corrExclusivo;
+  document.getElementById('corrExc').className='exclu'+(corrExclusivo?' on':'');
+}
+/* La planilla solo existe para el personal: en Público se quita de la lista. */
+function corrCambiaTipo(){
+  const t=document.getElementById('corrTipo').value,s=document.getElementById('corrPago');
+  const pl=Array.prototype.filter.call(s.options,function(o){return o.value==='Descuento por planilla';})[0];
+  if(t==='Publico'){
+    if(s.value==='Descuento por planilla')s.value='Efectivo';
+    if(pl)pl.disabled=true;
+  }else if(pl)pl.disabled=false;
+}
+function cerrarCorr(){document.getElementById('mcorr').classList.remove('open');corrId=null;}
+async function guardarCorr(){
+  if(!corrId)return;
+  const q=parseInt(document.getElementById('corrCant').value)||0;
+  const p=parseFloat(document.getElementById('corrPre').value)||0;
+  if(q<1){toast('La cantidad debe ser mayor a cero',true);return;}
+  if(p<=0){toast('El precio debe ser mayor a cero',true);return;}
+  const b=document.getElementById('corrBtn');b.disabled=true;b.textContent='Guardando…';
+  try{
+    const tipo=document.getElementById('corrTipo').value,pago=document.getElementById('corrPago').value;
+    const r=await api({action:'editar_linea',id:corrId,cantidad:q,precio:p,
+                       tipo:tipo,pago:pago,exclusivo:corrExclusivo,
+                       usuario:document.getElementById('usuario').value});
+    if(!r.ok)throw new Error(r.error||'No se pudo corregir');
+    const v=VENTAS.find(function(x){return x.id===corrId;});
+    const tk=v?v.tk:'';
+    if(v){v.q=q;v.p=p;}
+    VENTAS.forEach(function(x){
+      if(tk&&x.tk===tk){x.modo=r.tipo||tipo;x.pago=r.pago||pago;x.exc=corrExclusivo?'SI':'NO';}
+    });
+    cerrarCorr();pintaReg();cargarHoy();
+    toast(r.lineasVenta>1?('Corregido · la venta completa quedó como '+(r.tipo||tipo)):'Línea corregida');
+  }catch(e){toast('No se pudo corregir: '+e.message,true);}
+  finally{b.disabled=false;b.textContent='Guardar';}
+}
+async function anularLineaReg(){
+  if(!corrId)return;
+  if(!confirm('¿Anular esta línea? Deja de contar en el registro y en el dashboard, pero no se borra: queda marcada como anulada.'))return;
+  try{
+    const r=await api({action:'anular_linea',id:corrId,usuario:document.getElementById('usuario').value});
+    if(!r.ok)throw new Error(r.error||'No se pudo anular');
+    VENTAS=VENTAS.filter(function(x){return x.id!==corrId;});
+    cerrarCorr();pintaReg();cargarHoy();toast('Línea anulada');
+  }catch(e){toast('No se pudo anular: '+e.message,true);}
 }
 function unDia(){
   const a=document.getElementById('rd1'),b=document.getElementById('rd2');
