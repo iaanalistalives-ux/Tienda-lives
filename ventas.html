@@ -171,6 +171,18 @@ font-weight:700;cursor:pointer;font-size:16px;line-height:1;}
 .tot{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 10px;}
 .tot .v{font-size:30px;font-weight:700;color:var(--taupe);}
 .empty{color:var(--stone);font-size:13px;padding:16px 0;text-align:center;}
+.modos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:var(--warm-light);
+padding:5px;border-radius:10px;}
+@media(max-width:600px){.modos{grid-template-columns:1fr;}}
+.modos button{font-family:inherit;font-size:14.5px;font-weight:700;border:none;background:none;
+color:var(--stone);padding:13px 6px;border-radius:7px;cursor:pointer;line-height:1.25;}
+.modos button.on{background:var(--sage);color:#fff;box-shadow:var(--sh);}
+.modos button.on.exc{background:var(--taupe);}
+.avisomodo{font-size:12.5px;font-weight:700;padding:9px 12px;border-radius:8px;margin-top:10px;}
+.avisomodo.col{background:#E7F4EF;color:var(--sage-dark);}
+.avisomodo.exc{background:#FEF3E2;color:var(--taupe);}
+.desc{font-size:11.5px;font-weight:700;color:var(--taupe);}
+.tach{text-decoration:line-through;color:var(--stone);font-weight:400;}
 .cliente{border-top:1px solid var(--warm);margin-top:10px;padding-top:10px;}
 .cliente summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--sage-dark);list-style:none;}
 .cliente summary::-webkit-details-marker{display:none;}
@@ -311,7 +323,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         <div class="panel">
           <div class="pt">Registro de ventas</div>
           <div class="ph">Solo consulta: desde esta página no se puede registrar, corregir ni anular ninguna venta. Incluye el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Al abrir se cargan los últimos 90 días; con "Cargar todo el historial" se ve desde el inicio. Se muestran las 400 líneas más recientes del filtro.</div>
-          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th></tr></thead><tbody id="treg"></tbody></table></div>
+          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Modo</th></tr></thead><tbody id="treg"></tbody></table></div>
           <div class="ph" id="regcount" style="margin-top:10px"></div>
         </div>
       </section>
@@ -338,8 +350,9 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <button class="active" onclick="tab(0,this)">Tendencia</button>
           <button onclick="tab(1,this)">Año contra año</button>
           <button onclick="tab(2,this)">Clientes y tickets</button>
-          <button onclick="tab(3,this)">Qué se vende</button>
-          <button onclick="tab(4,this)">Detalle por prenda</button>
+          <button onclick="tab(3,this)">Quién compra</button>
+          <button onclick="tab(4,this)">Qué se vende</button>
+          <button onclick="tab(5,this)">Detalle por prenda</button>
         </div>
         <div class="tabpane active">
           <div class="grid">
@@ -378,6 +391,24 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
             <div class="panel col6"><div class="pt">Prendas por boleta, por mes</div>
               <div class="ph">Cuántas prendas se lleva un cliente por visita. Subir este número suele costar menos que traer clientes nuevos.</div>
               <div class="cwrap"><canvas id="cPPB"></canvas></div></div>
+          </div>
+        </div>
+        <div class="tabpane">
+          <div class="insight" id="insQC"></div>
+          <div class="grid">
+            <div class="panel col5"><div class="pt">Quién compra</div>
+              <div class="ph">Cada persona según el tipo de cliente de su boleta: público, obrero o empleado.</div>
+              <div class="tblwrap"><table><thead><tr><th>Tipo</th><th class="num">Personas</th><th class="num">Boletas</th><th class="num">Ingreso</th><th class="num">%</th></tr></thead><tbody id="tQC"></tbody></table></div></div>
+            <div class="panel col7"><div class="pt">Cuántas veces vuelve cada cliente</div>
+              <div class="ph">Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.</div>
+              <div class="cwrap"><canvas id="cFREQ"></canvas></div></div>
+            <div class="panel col12"><div class="pt">Los 25 clientes que más veces compraron</div>
+              <div class="ph">Ordenado por número de boletas. El documento va parcialmente oculto; el detalle completo está en la hoja Historico_Clientes del archivo de Google. Período: enero 2025 a junio 2026.</div>
+              <div class="tblwrap" style="max-height:560px"><table><thead><tr>
+                <th>#</th><th>Cliente</th><th>Tipo</th><th class="num">Veces</th><th class="num">Prendas</th>
+                <th class="num">Gasto</th><th class="num">Ticket</th><th class="num">Meses</th>
+                <th class="num">Vuelve cada</th><th>Mes que más compró</th><th class="num">Planilla</th>
+              </tr></thead><tbody id="tTOP"></tbody></table></div></div>
           </div>
         </div>
         <div class="tabpane">
@@ -435,6 +466,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
+let modo='Publico';
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -482,7 +514,7 @@ function cargaCatalogos(d){
 function mapVentas(rows){
   return (rows||[]).map(function(v){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||''};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0};
   });
 }
 function recalcFechas(){
@@ -498,7 +530,7 @@ async function cargarHoy(){
     const g={},ord=[];
     mapVentas(r.ventas).filter(function(v){return v.f===hoy;}).forEach(function(v){
       const k=v.tk||('sin-'+v.h);
-      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',lineas:[]};ord.push(k);}
+      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',modo:v.modo||'',lineas:[]};ord.push(k);}
       g[k].u+=v.q;g[k].t+=v.q*v.p;
       g[k].lineas.push({ma:v.ma,ca:v.ca,es:v.es,co:v.co,ta:v.ta,q:v.q,p:v.p});
     });
@@ -624,7 +656,8 @@ function pintaReg(){
   document.getElementById('treg').innerHTML=r.slice(0,400).map(function(v){
     return '<tr><td>'+v.f+'</td><td>'+(v.h||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
-    '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td></tr>';}).join('');
+    '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
+    '<td>'+(v.modo&&v.modo!=='Publico'?'<span class="pill warn">'+v.modo+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
   document.getElementById('regcount').textContent='Mostrando '+Math.min(r.length,400)+' de '+N(r.length)+' líneas.';
 }
 function unDia(){
@@ -696,52 +729,74 @@ function pintaDash(){
       'Para verlas, elija <b>Desde el 19 jun</b>.';
   }else av.style.display='none';
   document.querySelectorAll('#v-dash .tabs button').forEach(function(b,k){
-    if(k===3||k===4)b.style.display=conHist?'none':'';
+    if(k===4||k===5)b.style.display=conHist?'none':'';
   });
   if(conHist){
     const act=document.querySelector('#v-dash .tabs button.active');
     if(act&&act.style.display==='none')tab(0,document.querySelectorAll('#v-dash .tabs button')[0]);
   }
   /* ==== gráfico principal ==== */
+  pintaBotonesGran(FECHAS.length);
   const G=agrupaM(M,FECHAS);
   let mx1=-1,mi1=0;G.val.forEach(function(v,i){if(v>mx1){mx1=v;mi1=i;}});
   document.getElementById('mejorPer').innerHTML=G.val.length?
-    ('Suma de precio × cantidad, agrupada por '+G.nom+'. El mejor '+G.nom+' fue <b>'+G.lab[mi1]+'</b> con '+S(mx1)+
+    ('Suma de precio × cantidad, agrupada por '+G.nom+'. El mejor '+G.nom+' fue <b>'+G.labTxt[mi1]+'</b> con '+S(mx1)+
      (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
   drawSpark('sp1',serie);
   if(gran==='dia'){
     draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
       pointRadius:G.val.length>40?0:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:true,
       backgroundColor:function(c){const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(15,122,90,.18)');g.addColorStop(1,'rgba(15,122,90,0)');return g;}}]},
-      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},x:{ticks:{maxTicksLimit:14}}}}});
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
+        x:{ticks:{maxTicksLimit:12,maxRotation:0,minRotation:0}}}}});
   }else{
     draw('c1',{type:'bar',data:{labels:G.lab,datasets:[{data:G.val,
       backgroundColor:G.val.map(function(_,i){return i===mi1?'#0B815E':'#7FB3A2';}),borderRadius:6,maxBarThickness:70}]},
-      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},x:{ticks:{maxTicksLimit:14,autoSkip:false}}}}});
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
+        x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
   }
   pintaAnioAnio(M);
   pintaClientes(M,ingB,uniB,bol);
+  pintaQuienCompra();
   if(!conHist)pintaDetalle(desdeF);
   else document.getElementById('insight').innerHTML=insightHist(M,ing,uni,bol,dias);
 }
+/* Dos juegos de etiquetas: las del gráfico (cortas, en dos líneas cuando hace
+   falta) y las de texto completas para la frase de arriba y el tooltip.
+   "ene 2025" repetido 20 veces se pisa; "ENE" arriba con el año debajo, y el
+   año solo cuando cambia, se lee de un vistazo. */
 function agrupaM(M,fs){
-  const lab=[],val=[];
-  if(gran==='dia'){fs.forEach(function(f){lab.push(ddmm(f));val.push(M[f].i);});return {lab:lab,val:val,nom:'día'};}
+  const lab=[],labTxt=[],val=[];
+  if(gran==='dia'){
+    fs.forEach(function(f){lab.push(ddmm(f));labTxt.push(ddmm(f));val.push(M[f].i);});
+    return {lab:lab,labTxt:labTxt,val:val,nom:'día'};
+  }
   const map=new Map();
   fs.forEach(function(f){
-    let k,l;
+    let k,l,t;
     if(gran==='sem'){
       const d=new Date(f+'T00:00:00'),dow=(d.getDay()+6)%7;
       const ini=new Date(d);ini.setDate(d.getDate()-dow);
       const fin=new Date(ini);fin.setDate(ini.getDate()+6);
-      k=ini.toISOString().slice(0,10);l=ddmm(k)+' al '+ddmm(fin.toISOString().slice(0,10));
-    }else if(gran==='mes'){k=f.slice(0,7);l=MES[parseInt(f.slice(5,7))-1].slice(0,3)+' '+f.slice(0,4);}
-    else{k=f.slice(0,4);l=k;}
-    if(!map.has(k))map.set(k,{l:l,v:0});
+      k=ini.toISOString().slice(0,10);
+      l=[ddmm(k)];t='semana del '+ddmm(k)+' al '+ddmm(fin.toISOString().slice(0,10));
+    }else if(gran==='mes'){
+      k=f.slice(0,7);
+      l=[MES[parseInt(f.slice(5,7))-1].slice(0,3).toUpperCase(),f.slice(0,4)];
+      t=MES[parseInt(f.slice(5,7))-1]+' '+f.slice(0,4);
+    }else{k=f.slice(0,4);l=[k];t=k;}
+    if(!map.has(k))map.set(k,{l:l,t:t,v:0});
     map.get(k).v+=M[f].i;
   });
-  Array.from(map.keys()).sort().forEach(function(k){lab.push(map.get(k).l);val.push(map.get(k).v);});
-  return {lab:lab,val:val,nom:(gran==='sem'?'semana':gran==='mes'?'mes':'año')};
+  let anioPrev=null;
+  Array.from(map.keys()).sort().forEach(function(k){
+    const o=map.get(k);let l=o.l;
+    if(gran==='mes'){ if(l[1]===anioPrev)l=[l[0]]; else anioPrev=l[1]; }
+    lab.push(l);labTxt.push(o.t);val.push(o.v);
+  });
+  return {lab:lab,labTxt:labTxt,val:val,nom:(gran==='sem'?'semana':gran==='mes'?'mes':'año')};
 }
 function insightHist(M,ing,uni,bol,dias){
   return 'En el período elegido se vendieron <b>'+N(uni)+' prendas</b> por <b>'+S(ing)+'</b>'+
@@ -830,6 +885,37 @@ function pintaClientes(M,ing,uni,bol){
      'En promedio cada cliente dejó '+S(c.ingreso/c.clientes)+' y volvió '+(c.boletas/c.clientes).toFixed(1)+' veces. '+
      'El negocio depende de que esa gente regrese, no de traer gente nueva.'):
     'Los datos de clientes vienen del histórico de boletas. El sistema nuevo recién empieza a registrarlos.';
+}
+/* ==== quién compra: tipos, frecuencia y top de clientes ==== */
+function pintaQuienCompra(){
+  const c=HIST&&HIST.cli;
+  if(!c||!c.top){document.getElementById('insQC').textContent='El detalle de clientes viene del histórico de boletas.';return;}
+  const tot=c.ingreso;
+  const tp=Object.keys(c.tipos).map(function(k){return [k,c.tipos[k]];}).sort(function(a,b){return b[1].ingreso-a[1].ingreso;});
+  document.getElementById('tQC').innerHTML=tp.map(function(t){
+    return '<tr><td style="font-weight:700">'+t[0]+'</td><td class="num">'+N(t[1].personas)+'</td>'+
+    '<td class="num">'+N(t[1].boletas)+'</td><td class="num" style="font-weight:700">'+S(t[1].ingreso)+'</td>'+
+    '<td class="num">'+(t[1].ingreso/tot*100).toFixed(1)+'%</td></tr>';}).join('');
+  const trab=tp.filter(function(t){return t[0]==='Obrero'||t[0]==='Empleado';}).reduce(function(a,t){return a+t[1].ingreso;},0);
+  document.getElementById('insQC').innerHTML=
+    'De <b>'+N(c.clientes)+' personas</b> que compraron entre enero 2025 y junio 2026, <b>'+N(c.repiten)+
+    '</b> volvieron más de una vez ('+(c.repiten/c.clientes*100).toFixed(0)+'%) y dejaron el <b>'+
+    (c.ingresoRepiten/c.ingreso*100).toFixed(0)+'% del ingreso</b>. '+
+    (trab>0?('El personal de la empresa —obreros y empleados— representa <b>'+(trab/tot*100).toFixed(1)+'% de la venta</b> ('+S(trab)+'). '):'')+
+    'Cada persona volvió '+(c.boletas/c.clientes).toFixed(1)+' veces en promedio y dejó '+S(c.ingreso/c.clientes)+'.';
+  const B=c.buckets||[0,0,0,0];
+  draw('cFREQ',{type:'bar',data:{labels:['1 vez','2 a 3 veces','4 a 9 veces','10 o más'],
+    datasets:[{data:B,backgroundColor:['#9CB3AC','#7FB3A2','#0F7A5A','#B45309'],borderRadius:6,maxBarThickness:70}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){
+      return x.parsed.y+' personas ('+(x.parsed.y/c.clientes*100).toFixed(0)+'%)';}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'personas'}}}}});
+  document.getElementById('tTOP').innerHTML=c.top.map(function(t,i){
+    const pill=t[2]==='Cliente externo'?'neu':(t[2]==='Empleado'?'warn':'ok');
+    return '<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+t[1]+'<div style="font-size:10.5px;color:var(--stone)">'+t[0]+'</div></td>'+
+    '<td><span class="pill '+pill+'">'+t[2]+'</span></td><td class="num" style="font-weight:700">'+t[3]+'</td>'+
+    '<td class="num">'+N(t[4])+'</td><td class="num">'+S(t[5])+'</td><td class="num">'+S(t[6])+'</td>'+
+    '<td class="num">'+t[7]+'</td><td class="num">'+(t[8]?t[8]+' días':'—')+'</td><td>'+t[9]+'</td>'+
+    '<td class="num">'+(t[10]?t[10]+'%':'—')+'</td></tr>';}).join('');
 }
 /* ==== detalle por prenda (solo período con registro completo) ==== */
 function pintaDetalle(desdeF){
