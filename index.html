@@ -179,6 +179,18 @@ padding:5px;border-radius:10px;}
 color:var(--stone);padding:13px 6px;border-radius:7px;cursor:pointer;line-height:1.25;}
 .modos button.on{background:var(--sage);color:#fff;box-shadow:var(--sh);}
 .modos button.on.exc{background:var(--taupe);}
+.exclu{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 12px;border-radius:10px;
+border:2px solid var(--warm);cursor:pointer;background:#fff;}
+.exclu:hover{border-color:var(--taupe);}
+.exclu.on{border-color:var(--taupe);background:#FEF3E2;}
+.exclu .sw2{width:46px;height:26px;border-radius:20px;background:var(--warm);flex:none;position:relative;transition:background .15s;}
+.exclu .sw2 span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;}
+.exclu.on .sw2{background:var(--taupe);}
+.exclu.on .sw2 span{left:23px;}
+.exclu .t1{font-size:14.5px;font-weight:700;color:#33413D;}
+.exclu.on .t1{color:var(--taupe);}
+.exclu .t2{font-size:11.5px;color:var(--stone);}
 .avisomodo{font-size:12.5px;font-weight:700;padding:9px 12px;border-radius:8px;margin-top:10px;}
 .avisomodo.col{background:#E7F4EF;color:var(--sage-dark);}
 .avisomodo.exc{background:#FEF3E2;color:var(--taupe);}
@@ -318,11 +330,16 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <div class="col8">
             <div class="panel">
               <div class="pt">¿A quién le está vendiendo?</div>
-              <div class="ph">Se elige antes de marcar la prenda. Define si el precio se puede cambiar o no.</div>
+              <div class="ph">Se elige antes de marcar la prenda. Son las mismas categorías del dashboard.</div>
               <div class="modos" id="modos">
-                <button class="on" onclick="setModo('Publico')">Público<br><span style="font-weight:400;font-size:11px">precio de lista, fijo</span></button>
-                <button onclick="setModo('Colaborador')">Colaborador<br><span style="font-weight:400;font-size:11px">obrero o empleado</span></button>
-                <button onclick="setModo('Exclusivo')">Precio exclusivo<br><span style="font-weight:400;font-size:11px">descuento especial</span></button>
+                <button class="on" onclick="setModo('Publico')">Público<br><span style="font-weight:400;font-size:11px">cliente externo</span></button>
+                <button onclick="setModo('Empleado')">Empleado<br><span style="font-weight:400;font-size:11px">personal administrativo</span></button>
+                <button onclick="setModo('Obrero')">Obrero<br><span style="font-weight:400;font-size:11px">personal de planta</span></button>
+              </div>
+              <div class="exclu" id="exclu" onclick="toggleExclusivo()">
+                <div class="sw2"><span></span></div>
+                <div><div class="t1">Precio exclusivo</div>
+                <div class="t2">Descuento especial. Se puede activar para cualquiera de los tres.</div></div>
               </div>
               <div class="avisomodo col" id="avisoModo" style="display:none"></div>
             </div>
@@ -378,7 +395,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         <div class="panel">
           <div class="pt">Registro de ventas</div>
           <div class="ph">Todo lo vendido, incluido el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Al abrir se cargan los últimos 90 días; con "Cargar todo el historial" se ve desde el inicio. Se muestran las 400 líneas más recientes del filtro.</div>
-          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Modo</th></tr></thead><tbody id="treg"></tbody></table></div>
+          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Tipo de cliente</th></tr></thead><tbody id="treg"></tbody></table></div>
           <div class="ph" id="regcount" style="margin-top:10px"></div>
         </div>
       </section>
@@ -574,7 +591,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico';
+let modo='Publico',exclusivo=false;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -623,7 +640,7 @@ function cargaCatalogos(d){
 function mapVentas(rows){
   return (rows||[]).map(function(v){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||''};
   });
 }
 function recalcFechas(){
@@ -639,7 +656,7 @@ async function cargarHoy(){
     const g={},ord=[];
     mapVentas(r.ventas).filter(function(v){return v.f===hoy;}).forEach(function(v){
       const k=v.tk||('sin-'+v.h);
-      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',modo:v.modo||'',lineas:[]};ord.push(k);}
+      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',modo:v.modo||'',exc:(v.exc==='SI'),lineas:[]};ord.push(k);}
       g[k].u+=v.q;g[k].t+=v.q*v.p;
       g[k].lineas.push({ma:v.ma,ca:v.ca,es:v.es,co:v.co,ta:v.ta,q:v.q,p:v.p});
     });
@@ -836,7 +853,7 @@ function pintaResumen(){
     r.innerHTML='<div style="color:var(--stone);font-size:14px">Falta marcar: <b>'+falta.map(function(k){return nom[k];}).join(', ')+'</b></div>';
     return;
   }
-  const c=NCAT[sel.ca],pre=c?c[2]:0,libre=(modo!=='Publico');
+  const c=NCAT[sel.ca],pre=c?c[2]:0,libre=puedeRebajar();
   const campoPrecio=libre
     ? '<div class="fg"><label>Precio a cobrar</label><input id="qprec" type="number" min="0" step="0.5" value="'+(pre||'')+'" oninput="calcTot()"></div>'
     : '<div class="fg"><label>Precio unitario</label><div class="fijo">'+(pre?S(pre):'sin precio')+'</div></div>';
@@ -855,7 +872,7 @@ function pintaResumen(){
 }
 function precioActual(){
   const c=NCAT[sel.ca],lista=c?c[2]:0;
-  if(modo==='Publico')return {p:lista,lista:lista};
+  if(!puedeRebajar())return {p:lista,lista:lista};
   const e=document.getElementById('qprec');
   const v=e?parseFloat(e.value):NaN;
   return {p:(isNaN(v)?lista:v),lista:lista};
@@ -865,7 +882,7 @@ function calcTot(){
   const x=precioActual();
   document.getElementById('qtot').textContent=S(q*x.p);
   const n=document.getElementById('qnota');
-  if(n&&modo!=='Publico'&&x.lista>0){
+  if(n&&puedeRebajar()&&x.lista>0){
     if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
     else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span>';
     else n.innerHTML='Precio de lista '+S(x.lista)+' · sin descuento';
@@ -916,7 +933,7 @@ async function cobrar(){
   try{
     const r=await api({action:'venta',items:items,pago:document.getElementById('pago').value,
                        usuario:document.getElementById('usuario').value,
-                       modo:modo,cliente:'',dni:'',celular:''});
+                       tipo:modo,exclusivo:exclusivo,cliente:'',dni:'',celular:''});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
     CART.forEach(function(x){
@@ -924,12 +941,13 @@ async function cobrar(){
                    pago:document.getElementById('pago').value,h:r.hora||'',tk:r.ticket||''});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
-    HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,
+    HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:exclusivo,
       pago:document.getElementById('pago').value,cli:'',dni:'',cel:'',
       lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0};})});
     CART=[];alerta('');
     pintaCart();pintaHoy();
-    setModo('Publico');       /* el modo no se queda pegado para el próximo cliente */
+    exclusivo=false;document.getElementById('exclu').className='exclu';
+    setModo('Publico');       /* nada se queda pegado para el próximo cliente */
     cargarHoy();              /* además se re-sincroniza con la hoja, por si acaso */
     marcaEstado(true,'Guardado');
     toast('Venta cobrada: '+S(r.total||total)+' · '+unid+' prenda(s)');
@@ -961,7 +979,8 @@ function pintaHoy(){
     return '<div class="vh"><div class="l1"><span class="h">'+(v.h||'—')+' · '+v.u+' prenda(s)</span>'+
       '<span class="t">'+S(v.t)+'</span></div>'+
       '<div class="l2">'+(v.pago||'')+
-      (v.modo&&v.modo!=='Publico'?' · <span class="desc">'+(v.modo==='Colaborador'?'Colaborador':'Precio exclusivo')+'</span>':'')+
+      ((v.modo&&v.modo!=='Publico')||v.exc?' · <span class="desc">'+
+        (v.modo&&v.modo!=='Publico'?v.modo:'Público')+(v.exc?' · exclusivo':'')+'</span>':'')+
       (v.cli?' · <b>'+v.cli+'</b>':'')+(v.dni?' · DNI '+v.dni:'')+(det?'<br>'+det:'')+'</div>'+acc+'</div>';
   }).join('');
 }
@@ -977,23 +996,32 @@ function abrirCli(i){
   document.getElementById('mcli').classList.add('open');
 }
 function cerrarCli(){document.getElementById('mcli').classList.remove('open');cliIdx=null;}
-/* Modo de venta: Público usa el precio de lista y no se puede tocar.
-   Colaborador y Exclusivo permiten rebajarlo, y queda registrado cuánto,
-   quién y bajo qué modo. Nunca se puede cobrar más que el precio de lista. */
+/* El precio se puede rebajar cuando el cliente es empleado u obrero, o
+   cuando se activa el precio exclusivo (que aplica a cualquiera de los tres).
+   Queda registrado cuánto se rebajó y quién lo hizo. Nunca se cobra de más. */
+function puedeRebajar(){return modo!=='Publico'||exclusivo;}
 function setModo(m){
   modo=m;
-  const bs=document.querySelectorAll('#modos button');
-  bs.forEach(function(b,i){
-    b.className=(['Publico','Colaborador','Exclusivo'][i]===m)?('on'+(m==='Exclusivo'?' exc':'')):'';
+  document.querySelectorAll('#modos button').forEach(function(b,i){
+    b.className=(['Publico','Empleado','Obrero'][i]===m)?'on':'';
   });
+  refrescaModo();
+}
+function toggleExclusivo(){
+  exclusivo=!exclusivo;
+  document.getElementById('exclu').className='exclu'+(exclusivo?' on':'');
+  refrescaModo();
+}
+function refrescaModo(){
   const av=document.getElementById('avisoModo');
-  if(m==='Publico'){av.style.display='none';}
+  if(!puedeRebajar()){av.style.display='none';}
   else{
     av.style.display='';
-    av.className='avisomodo '+(m==='Exclusivo'?'exc':'col');
-    av.textContent=(m==='Colaborador')
-      ? 'Venta a colaborador: puede escribir el precio de cada prenda.'
-      : 'Precio exclusivo: descuentos mayores. Todo queda registrado con su descuento.';
+    av.className='avisomodo '+(exclusivo?'exc':'col');
+    const quien=(modo==='Publico')?'cliente del público':(modo==='Empleado'?'empleado':'obrero');
+    av.textContent=exclusivo
+      ? ('Precio exclusivo para '+quien+': escriba el precio de cada prenda. Queda registrado el descuento.')
+      : ('Venta a '+quien+': puede escribir el precio de cada prenda.');
   }
   pintaResumen();pintaCart();
 }
@@ -1072,7 +1100,8 @@ function pintaReg(){
     return '<tr><td>'+v.f+'</td><td>'+(v.h||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
-    '<td>'+(v.modo&&v.modo!=='Publico'?'<span class="pill warn">'+v.modo+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
+    '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
+      (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
   document.getElementById('regcount').textContent='Mostrando '+Math.min(r.length,400)+' de '+N(r.length)+' líneas.';
 }
 function unDia(){
