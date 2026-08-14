@@ -57,8 +57,9 @@ border:1px solid var(--warm);background:#fff;color:var(--sage);}
 .btn.ghost{color:var(--stone);}.btn:disabled{opacity:.45;cursor:not-allowed;}
 .spacer{margin-left:auto;}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;}
-.col12{grid-column:span 12;}.col8{grid-column:span 8;}.col6{grid-column:span 6;}.col4{grid-column:span 4;}
-@media(max-width:1100px){.col8,.col6,.col4{grid-column:span 12;}}
+.col12{grid-column:span 12;}.col8{grid-column:span 8;}.col7{grid-column:span 7;}
+.col6{grid-column:span 6;}.col5{grid-column:span 5;}.col4{grid-column:span 4;}
+@media(max-width:1100px){.col8,.col7,.col6,.col5,.col4{grid-column:span 12;}}
 .panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px 18px;}
 .panel .pt{font-size:15px;font-weight:700;}
 .panel .ph{font-size:11.5px;color:var(--stone);margin:2px 0 12px;}
@@ -191,6 +192,12 @@ color:var(--stone);padding:13px 6px;border-radius:7px;cursor:pointer;line-height
 .cliente .campos{margin-top:10px;display:grid;gap:8px;}
 .cliente input{width:100%;}
 .cliente .nota{font-size:11px;color:var(--stone);margin-top:6px;}
+.scrollhoy{max-height:420px;overflow-y:auto;padding-right:6px;}
+.scrollhoy::-webkit-scrollbar{width:8px;}
+.scrollhoy::-webkit-scrollbar-track{background:var(--warm-light);border-radius:4px;}
+.scrollhoy::-webkit-scrollbar-thumb{background:var(--warm);border-radius:4px;}
+.scrollhoy::-webkit-scrollbar-thumb:hover{background:var(--stone);}
+@media(max-width:600px){.scrollhoy{max-height:340px;}}
 .vh{border-bottom:1px solid var(--warm-light);padding:9px 0;}
 .vh .l1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
 .vh .h{font-weight:700;font-size:13.5px;}
@@ -241,7 +248,8 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
  body.nav-open .side .brand{padding:16px 16px 14px;text-align:left;}
  body.nav-open .side a{justify-content:flex-start;padding:11px 16px;}}
 @media(max-width:900px){.wrap{padding:14px 14px 36px;}.col12,.col8,.col6,.col4{grid-column:span 12;}
- .kpis{grid-template-columns:repeat(2,1fr);}.cwrap{height:300px;}.cwrap.tall{height:340px;}}
+ .kpis{grid-template-columns:repeat(2,1fr);}.cwrap{height:300px;}.cwrap.tall{height:340px;}
+ .col12,.col8,.col7,.col6,.col5,.col4{grid-column:span 12;}}
 @media(max-width:600px){
  body{font-size:14.5px;}
  .side{position:fixed;left:0;top:0;height:100vh;width:84%;max-width:300px;z-index:60;transform:translateX(-100%);transition:transform .22s ease;}
@@ -296,7 +304,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       <div><div class="htitle" id="ttl">Vender</div><div class="hsub" id="tsub">Venta presencial</div></div>
       <div class="hright">
         <select id="usuario" title="Quién está atendiendo">
-          <option>Rosa</option><option>Christian</option><option>Otra persona</option>
+          <option>Rosa</option><option>Cristina</option><option>Otra persona</option>
         </select>
         <div class="estado"><span class="punto" id="punto"></span><span class="txt3" id="estadotxt">Conectado</span></div>
       </div>
@@ -339,7 +347,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
             <div class="panel" style="margin-top:14px">
               <div class="pt">Ventas de hoy</div>
               <div class="ph">Cada cobro queda guardado al instante. Si se equivocó, use Corregir o Anular.</div>
-              <div id="hoy"><div class="empty">Sin ventas todavía</div></div>
+              <div id="hoy" class="scrollhoy"><div class="empty">Sin ventas todavía</div></div>
             </div>
           </div>
         </div>
@@ -602,7 +610,7 @@ async function arrancar(){
     cargarHoy();
   }catch(e){
     document.getElementById('cargatxt').textContent='No se pudo conectar';
-    document.getElementById('cargasub').textContent=e.message+' Revise el internet y vuelva a intentar. Si sigue igual, avise a Christian.';
+    document.getElementById('cargasub').textContent=e.message+' Revise el internet y vuelva a intentar. Si sigue igual, avise al área de Sistemas.';
     document.getElementById('cargabtn').style.display='';
     marcaEstado(false,'Sin conexión');
   }
@@ -942,7 +950,8 @@ function pintaHoy(){
   const c=document.getElementById('hoy');
   if(!HOY.length){c.innerHTML='<div class="empty">Sin ventas todavía</div>';return;}
   const tt=HOY.reduce(function(a,v){return a+v.t;},0),uu=HOY.reduce(function(a,v){return a+v.u;},0);
-  c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm)">'+
+  c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm);'+
+  'position:sticky;top:0;background:#fff;z-index:2">'+
   '<span>'+uu+' prendas hoy</span><span style="color:var(--taupe)">'+S(tt)+'</span></div>'+
   HOY.slice(0,20).map(function(v,i){
     const acc=v.tk?('<div class="acc"><button class="cli2" onclick="abrirCli('+i+')">'+(v.cli||v.dni||v.cel?'✓ Cliente':'+ Cliente')+'</button>'+
@@ -1468,7 +1477,14 @@ function pintaClientes(M,ing,uni,bol){
 /* ==== quién compra: tipos, frecuencia y top de clientes ==== */
 function pintaQuienCompra(){
   const c=HIST&&HIST.cli;
-  if(!c||!c.top){document.getElementById('insQC').textContent='El detalle de clientes viene del histórico de boletas.';return;}
+  if(!c||!c.top){
+    document.getElementById('insQC').innerHTML='<b>Todavía no hay datos de clientes.</b> Esta pestaña se alimenta de la hoja '+
+      '<b>Historico_Clientes</b> del archivo de Google. Si ya la importó, falta publicar la última versión del script: '+
+      'Apps Script → Implementar → Administrar implementaciones → editar → Nueva versión.';
+    document.getElementById('tQC').innerHTML='';
+    document.getElementById('tTOP').innerHTML='';
+    return;
+  }
   const tot=c.ingreso;
   const tp=Object.keys(c.tipos).map(function(k){return [k,c.tipos[k]];}).sort(function(a,b){return b[1].ingreso-a[1].ingreso;});
   document.getElementById('tQC').innerHTML=tp.map(function(t){
