@@ -223,6 +223,8 @@ background:#fff;color:var(--stone);cursor:pointer;font-family:inherit;font-weigh
 .vh .acc button.anu{color:var(--rose);}
 .vh .acc button:hover{border-color:currentColor;}
 .chip .x{cursor:pointer;color:var(--stone);font-weight:700;padding:0 2px;border-radius:50%;}
+.cel{font-weight:700;color:var(--sage-dark);cursor:pointer;border-bottom:1px dashed var(--sage);}
+.cel:hover{color:var(--taupe);border-color:var(--taupe);}
 .chip .x:hover{color:var(--rose);}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--petrol);color:#fff;
 padding:13px 24px;border-radius:10px;font-weight:700;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:90;
@@ -423,11 +425,11 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph">Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.</div>
               <div class="cwrap"><canvas id="cFREQ"></canvas></div></div>
             <div class="panel col12"><div class="pt">Los 25 clientes que más veces compraron</div>
-              <div class="ph">Ordenado por número de boletas. El documento va parcialmente oculto; el detalle completo está en la hoja Historico_Clientes del archivo de Google. Período: enero 2025 a junio 2026.</div>
+              <div class="ph" id="phTop">Ordenado por número de boletas. El documento va parcialmente oculto. Período: enero 2025 a junio 2026.</div>
               <div class="tblwrap" style="max-height:560px"><table><thead><tr>
                 <th>#</th><th>Cliente</th><th>Tipo</th><th class="num">Veces</th><th class="num">Prendas</th>
                 <th class="num">Gasto</th><th class="num">Ticket</th><th class="num">Meses</th>
-                <th class="num">Vuelve cada</th><th>Mes que más compró</th><th class="num">Planilla</th>
+                <th class="num">Vuelve cada</th><th>Mes que más compró</th><th class="num">Planilla</th><th>Celular</th><th>Correo</th>
               </tr></thead><tbody id="tTOP"></tbody></table></div></div>
           </div>
         </div>
@@ -934,6 +936,11 @@ function pintaClientes(M,ing,uni,bol){
     'Los datos de clientes vienen del histórico de boletas. El sistema nuevo recién empieza a registrarlos.';
 }
 /* ==== quién compra: tipos, frecuencia y top de clientes ==== */
+function copiaCel(n){
+  const t=document.createElement('textarea');t.value=n;document.body.appendChild(t);
+  t.select();try{document.execCommand('copy');toast('Celular copiado: '+n);}catch(e){toast('No se pudo copiar');}
+  document.body.removeChild(t);
+}
 function pintaQuienCompra(){
   const c=HIST&&HIST.cli;
   if(!c||!c.top){
@@ -957,6 +964,11 @@ function pintaQuienCompra(){
     (c.ingresoRepiten/c.ingreso*100).toFixed(0)+'% del ingreso</b>. '+
     (trab>0?('El personal de la empresa —obreros y empleados— representa <b>'+(trab/tot*100).toFixed(1)+'% de la venta</b> ('+S(trab)+'). '):'')+
     'Cada persona volvió '+(c.boletas/c.clientes).toFixed(1)+' veces en promedio y dejó '+S(c.ingreso/c.clientes)+'.';
+  const cc=c.conCelular||0;
+  document.getElementById('phTop').innerHTML='Ordenado por quién compra más, así los mejores clientes quedan arriba. '+
+    'Toque un celular o un correo para copiarlo. <b>Celulares registrados: '+N(cc)+' · correos: '+N(c.conCorreo||0)+'</b> — '+
+    'las boletas antiguas nunca pidieron esos datos, se llenan cuando la tienda los registra al cobrar. '+
+    'Compras: enero 2025 a junio 2026.';
   const B=c.buckets||[0,0,0,0];
   draw('cFREQ',{type:'bar',data:{labels:['1 vez','2 a 3 veces','4 a 9 veces','10 o más'],
     datasets:[{data:B,backgroundColor:['#9CB3AC','#7FB3A2','#0F7A5A','#B45309'],borderRadius:6,maxBarThickness:70}]},
@@ -969,7 +981,9 @@ function pintaQuienCompra(){
     '<td><span class="pill '+pill+'">'+t[2]+'</span></td><td class="num" style="font-weight:700">'+t[3]+'</td>'+
     '<td class="num">'+N(t[4])+'</td><td class="num">'+S(t[5])+'</td><td class="num">'+S(t[6])+'</td>'+
     '<td class="num">'+t[7]+'</td><td class="num">'+(t[8]?t[8]+' días':'—')+'</td><td>'+t[9]+'</td>'+
-    '<td class="num">'+(t[10]?t[10]+'%':'—')+'</td></tr>';}).join('');
+    '<td class="num">'+(t[10]?t[10]+'%':'—')+'</td>'+
+    '<td>'+(t[11]?'<span class="cel" onclick="copiaCel(\''+t[11]+'\')" title="Clic para copiar">'+t[11]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td>'+
+    '<td>'+(t[12]?'<span class="cel" onclick="copiaCel(\''+t[12]+'\')" title="Clic para copiar">'+t[12]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td></tr>';}).join('');
 }
 /* ==== detalle por prenda (solo período con registro completo) ==== */
 function pintaDetalle(desdeF){
