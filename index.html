@@ -699,9 +699,9 @@ function cargaCatalogos(d){
   reindex();
 }
 function mapVentas(rows){
-  return (rows||[]).map(function(v){
+  return (rows||[]).map(function(v,i){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||''};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||'',_i:i};
   });
 }
 function recalcFechas(){
@@ -1000,7 +1000,7 @@ async function cobrar(){
     const f=hoyISO();
     CART.forEach(function(x){
       VENTAS.push({f:f,sku:'',ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,
-                   pago:pagoUsado,h:r.hora||'',tk:r.ticket||''});
+                   pago:pagoUsado,h:r.hora||'',tk:r.ticket||'',_i:1e9});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
     HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:exclusivo,
@@ -1214,7 +1214,14 @@ function pintaReg(){
     if(ca&&v.ca!==ca)return false;
     if(q&&((v.sku||'')+' '+descP(v)).toLowerCase().indexOf(q)<0)return false;
     return true;});
-  r.sort(function(a,b){return a.f<b.f?1:a.f>b.f?-1:0;});
+  /* Lo más reciente primero: por fecha, luego por hora y, si la hora no
+     existe (ventas migradas del Excel), por el orden en que se registraron. */
+  r.sort(function(a,b){
+    if(a.f!==b.f)return a.f<b.f?1:-1;
+    const ha=hhmm(a.h),hb=hhmm(b.h);
+    if(ha!==hb)return ha<hb?1:-1;
+    return (b._i||0)-(a._i||0);
+  });
   const ing=r.reduce(function(a,v){return a+v.q*v.p;},0),uni=r.reduce(function(a,v){return a+v.q;},0);
   document.getElementById('kreg').innerHTML=
     '<div class="kpi money"><div class="l">Ingresos del filtro</div><div class="row"><span class="v">'+S(ing)+'</span></div><div class="s">'+N(r.length)+' líneas</div></div>'+
