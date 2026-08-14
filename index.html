@@ -105,6 +105,13 @@ details.help{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);
 details.help summary{cursor:pointer;font-weight:700;color:var(--sage-dark);}
 details.help p{color:var(--stone);margin:8px 0 0;}
 .tblwrap{max-height:520px;overflow:auto;}
+/* La tabla de clientes tiene muchas columnas: se le da ancho mínimo propio y
+   se desplaza en horizontal, en vez de apretar los datos hasta partirlos. */
+.tblwrap.ancha table{min-width:1240px;}
+.tblwrap.ancha th,.tblwrap.ancha td{white-space:nowrap;}
+.tblwrap.ancha td:nth-child(2){white-space:normal;min-width:190px;}
+.tblwrap.ancha th:first-child,.tblwrap.ancha td:first-child{position:sticky;left:0;background:#fff;z-index:1;}
+.tblwrap.ancha tr:hover td:first-child{background:var(--warm-light);}
 .step{margin-bottom:14px;}
 .steph{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .stepn{width:26px;height:26px;border-radius:50%;background:var(--warm-light);color:var(--stone);
@@ -183,6 +190,9 @@ color:var(--stone);padding:13px 6px;border-radius:7px;cursor:pointer;line-height
 border:2px solid var(--warm);cursor:pointer;background:#fff;}
 .exclu:hover{border-color:var(--taupe);}
 .exclu.on{border-color:var(--taupe);background:#FEF3E2;}
+.exclu.pla.on{border-color:var(--slate);background:#EEF3F5;}
+.exclu.pla.on .sw2{background:var(--slate);}
+.exclu.pla.on .t1{color:var(--slate);}
 .exclu .sw2{width:46px;height:26px;border-radius:20px;background:var(--warm);flex:none;position:relative;transition:background .15s;}
 .exclu .sw2 span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
 box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;}
@@ -343,6 +353,11 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
                 <div><div class="t1">Precio exclusivo</div>
                 <div class="t2">Descuento especial. Se puede activar para cualquiera de los tres.</div></div>
               </div>
+              <div class="exclu pla" id="planilla" onclick="togglePlanilla()" style="display:none">
+                <div class="sw2"><span></span></div>
+                <div><div class="t1">Descuento por planilla</div>
+                <div class="t2">No paga ahora: se le descuenta del sueldo. Reemplaza a la forma de pago.</div></div>
+              </div>
               <div class="avisomodo col" id="avisoModo" style="display:none"></div>
             </div>
             <div class="panel" style="margin-top:14px">
@@ -357,8 +372,12 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <h3>Venta actual</h3>
               <div id="citems"><div class="empty">Todavía no agrega prendas</div></div>
               <div class="tot"><span style="font-weight:700">Total</span><span class="v" id="ctot">S/ 0.00</span></div>
-              <div class="field" style="margin-bottom:10px"><label>Forma de pago</label>
+              <div class="field" id="campoPago" style="margin-bottom:10px"><label>Forma de pago</label>
                 <select id="pago"><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+              <div class="field" id="avisoPago" style="margin-bottom:10px;display:none">
+                <label>Forma de pago</label>
+                <div style="font-size:14.5px;font-weight:700;color:var(--slate);background:#EEF3F5;
+                border-radius:8px;padding:11px 12px">Descuento por planilla</div></div>
 
               <button class="btn primary" style="width:100%;padding:15px;font-size:17px" id="bcobrar" onclick="cobrar()" disabled>Cobrar</button>
               <button class="btn ghost" style="width:100%;margin-top:8px" onclick="vaciar()">Vaciar</button>
@@ -517,11 +536,11 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph">Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.</div>
               <div class="cwrap"><canvas id="cFREQ"></canvas></div></div>
             <div class="panel col12"><div class="pt">Los 25 clientes que más veces compraron</div>
-              <div class="ph" id="phTop">Ordenado por número de boletas. El documento va parcialmente oculto. Período: enero 2025 a junio 2026.</div>
-              <div class="tblwrap" style="max-height:560px"><table><thead><tr>
+              <div class="ph" id="phTop">Ordenado por número de boletas. <b>Planilla</b> = qué parte de sus compras se pagó por descuento de planilla y no en efectivo. Período: enero 2025 a junio 2026.</div>
+              <div class="tblwrap ancha" style="max-height:560px"><table><thead><tr>
                 <th>#</th><th>Cliente</th><th>Tipo</th><th class="num">Veces</th><th class="num">Prendas</th>
                 <th class="num">Gasto</th><th class="num">Ticket</th><th class="num">Meses</th>
-                <th class="num">Vuelve cada</th><th>Mes que más compró</th><th class="num">Planilla</th><th>Celular</th><th>Correo</th>
+                <th class="num">Vuelve cada</th><th>Mes que más compró</th><th class="num" title="Porcentaje de sus compras pagadas por descuento de planilla">Planilla</th><th>Celular</th><th>Correo</th>
               </tr></thead><tbody id="tTOP"></tbody></table></div></div>
           </div>
         </div>
@@ -570,17 +589,19 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   <div class="modal" style="max-width:440px">
     <h3>Datos del cliente</h3>
     <div class="sub" id="clisub">—</div>
+    <div class="field" style="margin-bottom:6px"><label>DNI — empiece por aquí</label>
+      <input id="mcDni" type="text" inputmode="numeric" maxlength="12" placeholder="Escriba el documento"
+             autocomplete="off" oninput="buscaDni()" style="font-size:19px;font-weight:700;letter-spacing:1px;padding:12px"></div>
+    <div class="ph" id="cliHint" style="margin-bottom:12px">Si ya compró antes, los demás datos se completan solos.</div>
     <div class="field" style="margin-bottom:10px"><label>Nombre y apellido</label>
       <input id="mcNom" type="text" placeholder="opcional" autocomplete="off"></div>
     <div class="frow">
-      <div class="field"><label>DNI</label>
-        <input id="mcDni" type="text" inputmode="numeric" maxlength="12" placeholder="opcional" autocomplete="off" oninput="buscaDni()"></div>
       <div class="field"><label>Celular</label>
         <input id="mcCel" type="text" inputmode="numeric" maxlength="9" placeholder="opcional" autocomplete="off"></div>
+      <div class="field"><label>Correo</label>
+        <input id="mcMail" type="text" placeholder="opcional" autocomplete="off"></div>
     </div>
-    <div class="field" style="margin-bottom:12px"><label>Correo</label>
-      <input id="mcMail" type="text" placeholder="opcional" autocomplete="off"></div>
-    <div class="ph" id="cliHint">Escriba el DNI y, si ya compró antes, el nombre y el celular se completan solos.</div>
+    <div class="ph" style="margin-bottom:6px">Nada es obligatorio: se guarda lo que el cliente haya querido dar.</div>
     <div class="mact"><button class="btn ghost" onclick="cerrarCli()">Cancelar</button>
       <button class="btn primary" id="mcBtn" onclick="guardarCli()">Guardar</button></div>
   </div>
@@ -618,7 +639,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico',exclusivo=false;
+let modo='Publico',exclusivo=false,planilla=false;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -958,22 +979,24 @@ async function cobrar(){
   const total=CART.reduce(function(a,x){return a+x.q*x.precio;},0);
   const unid=CART.reduce(function(a,x){return a+x.q;},0);
   try{
-    const r=await api({action:'venta',items:items,pago:document.getElementById('pago').value,
+    const pagoUsado=planilla?'Descuento por planilla':document.getElementById('pago').value;
+    const r=await api({action:'venta',items:items,pago:pagoUsado,
                        usuario:document.getElementById('usuario').value,
                        tipo:modo,exclusivo:exclusivo,cliente:'',dni:'',celular:''});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
     CART.forEach(function(x){
       VENTAS.push({f:f,sku:'',ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,
-                   pago:document.getElementById('pago').value,h:r.hora||'',tk:r.ticket||''});
+                   pago:pagoUsado,h:r.hora||'',tk:r.ticket||''});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
     HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:exclusivo,
-      pago:document.getElementById('pago').value,cli:'',dni:'',cel:'',
+      pago:pagoUsado,cli:'',dni:'',cel:'',
       lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0};})});
     CART=[];alerta('');
     pintaCart();pintaHoy();
     exclusivo=false;document.getElementById('exclu').className='exclu';
+    planilla=false;document.getElementById('planilla').className='exclu pla';
     setModo('Publico');       /* nada se queda pegado para el próximo cliente */
     cargarHoy();              /* además se re-sincroniza con la hoja, por si acaso */
     marcaEstado(true,'Guardado');
@@ -1022,9 +1045,10 @@ function abrirCli(i){
   document.getElementById('mcCel').value=v.cel||'';
   document.getElementById('mcMail').value=v.mail||'';
   dniBuscado='';
-  document.getElementById('cliHint').textContent='Escriba el DNI y, si ya compró antes, el nombre y el celular se completan solos.';
+  document.getElementById('cliHint').textContent='Si ya compró antes, los demás datos se completan solos.';
   if(v.dni&&v.dni.length===8)buscaDni();
   document.getElementById('mcli').classList.add('open');
+  setTimeout(function(){const e=document.getElementById('mcDni');if(e)e.focus();},80);
 }
 function cerrarCli(){document.getElementById('mcli').classList.remove('open');cliIdx=null;}
 /* Al completar los 8 dígitos del DNI se busca en el histórico y en las ventas
@@ -1064,6 +1088,15 @@ function setModo(m){
   document.querySelectorAll('#modos button').forEach(function(b,i){
     b.className=(['Publico','Empleado','Obrero'][i]===m)?'on':'';
   });
+  /* La planilla solo existe para el personal: al pasar a Público se apaga. */
+  const pl=document.getElementById('planilla');
+  if(m==='Publico'){planilla=false;pl.className='exclu pla';pl.style.display='none';}
+  else pl.style.display='';
+  refrescaModo();
+}
+function togglePlanilla(){
+  planilla=!planilla;
+  document.getElementById('planilla').className='exclu pla'+(planilla?' on':'');
   refrescaModo();
 }
 function toggleExclusivo(){
@@ -1072,6 +1105,9 @@ function toggleExclusivo(){
   refrescaModo();
 }
 function refrescaModo(){
+  const fp=document.getElementById('campoPago'),ap=document.getElementById('avisoPago');
+  if(fp)fp.style.display=planilla?'none':'';
+  if(ap)ap.style.display=planilla?'':'none';
   const av=document.getElementById('avisoModo');
   if(!puedeRebajar()){av.style.display='none';}
   else{
