@@ -214,6 +214,11 @@ box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;}
 .cliente .campos{margin-top:10px;display:grid;gap:8px;}
 .cliente input{width:100%;}
 .cliente .nota{font-size:11px;color:var(--stone);margin-top:6px;}
+.cabhoy{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;}
+.cabhoy:hover .pt{color:var(--sage-dark);}
+/* Al desplegar las ventas del día, el panel de cobro deja de quedarse fijo:
+   si no, se queda encima y tapa la lista. */
+body.hoy-abierto .cart{position:static;}
 .scrollhoy{max-height:420px;overflow-y:auto;padding-right:6px;}
 .scrollhoy::-webkit-scrollbar{width:8px;}
 .scrollhoy::-webkit-scrollbar-track{background:var(--warm-light);border-radius:4px;}
@@ -383,9 +388,17 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <button class="btn ghost" style="width:100%;margin-top:8px" onclick="vaciar()">Vaciar</button>
             </div>
             <div class="panel" style="margin-top:14px">
-              <div class="pt">Ventas de hoy</div>
-              <div class="ph">Cada cobro queda guardado al instante. Si se equivocó, use Corregir o Anular.</div>
-              <div id="hoy" class="scrollhoy"><div class="empty">Sin ventas todavía</div></div>
+              <div class="cabhoy" onclick="toggleHoy()">
+                <div>
+                  <div class="pt">Ventas de hoy</div>
+                  <div class="ph" style="margin:2px 0 0" id="resumenHoy">Sin ventas todavía</div>
+                </div>
+                <button class="btn" id="btnHoy" onclick="event.stopPropagation();toggleHoy()">Ver</button>
+              </div>
+              <div id="cajaHoy" style="display:none">
+                <div class="ph" style="margin-top:10px">Cada cobro queda guardado al instante. Si se equivocó, use Corregir o Anular.</div>
+                <div id="hoy" class="scrollhoy"><div class="empty">Sin ventas todavía</div></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1014,8 +1027,22 @@ function hhmm(x){
   const m=/(\d{1,2}):(\d{2})/.exec(String(x));
   return m?('0'+m[1]).slice(-2)+':'+m[2]:'';
 }
+function toggleHoy(){
+  const abierto=document.body.classList.toggle('hoy-abierto');
+  document.getElementById('cajaHoy').style.display=abierto?'':'none';
+  document.getElementById('btnHoy').textContent=abierto?'Ocultar':'Ver';
+  if(abierto)setTimeout(function(){document.getElementById('cajaHoy').scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
 function pintaHoy(){
   const c=document.getElementById('hoy');
+  const res=document.getElementById('resumenHoy');
+  if(res){
+    if(!HOY.length)res.textContent='Sin ventas todavía';
+    else{
+      const t=HOY.reduce(function(a,v){return a+v.t;},0),u=HOY.reduce(function(a,v){return a+v.u;},0);
+      res.innerHTML='<b>'+HOY.length+' ventas · '+u+' prendas · <span style="color:var(--taupe)">'+S(t)+'</span></b>';
+    }
+  }
   if(!HOY.length){c.innerHTML='<div class="empty">Sin ventas todavía</div>';return;}
   const tt=HOY.reduce(function(a,v){return a+v.t;},0),uu=HOY.reduce(function(a,v){return a+v.u;},0);
   c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm);'+
