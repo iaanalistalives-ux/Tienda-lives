@@ -121,8 +121,7 @@ box-shadow:var(--sh);transition:transform .08s;}
 .opt.sel .pr{background:rgba(255,255,255,.22);color:#fff;}
 .opt .sw{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
 .opt.talla{min-width:62px;justify-content:center;font-size:16px;}
-.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start;}
-@media(max-width:1000px){.cols{grid-template-columns:repeat(2,1fr);}}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start;}
 @media(max-width:560px){.cols{grid-template-columns:1fr;}}
 .colg{background:var(--warm-light);border-radius:10px;padding:10px;align-self:start;}
 .colt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--stone);
@@ -321,9 +320,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       <section id="v-dash">
         <div class="bar no-print">
           <div id="segper" style="display:inline-flex;background:var(--warm-light);border-radius:8px;padding:3px;gap:2px">
-            <button class="btn primary" style="border:none" onclick="setPer('todo',this)">Todo</button>
-            <button class="btn ghost" style="border:none;background:none" onclick="setPer('30',this)">30 días</button>
             <button class="btn ghost" style="border:none;background:none" onclick="setPer('7',this)">7 días</button>
+            <button class="btn ghost" style="border:none;background:none" onclick="setPer('30',this)">30 días</button>
+            <button class="btn primary" style="border:none" onclick="setPer('tienda',this)">Desde el 19 jun</button>
+            <button class="btn ghost" style="border:none;background:none" onclick="setPer('todo',this)">Todo (desde 2025)</button>
           </div>
           <select id="fmarcaD" onchange="pintaDash()"></select>
           <span class="spacer"></span>
@@ -333,10 +333,13 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         </div>
         <div class="kpis" id="kdash"></div>
         <div class="insight" id="insight"></div>
+        <div class="insight" id="avisoHist" style="display:none;border-left-color:var(--slate)"></div>
         <div class="tabs">
           <button class="active" onclick="tab(0,this)">Tendencia</button>
-          <button onclick="tab(1,this)">Qué se vende</button>
-          <button onclick="tab(2,this)">Detalle por prenda</button>
+          <button onclick="tab(1,this)">Año contra año</button>
+          <button onclick="tab(2,this)">Clientes y tickets</button>
+          <button onclick="tab(3,this)">Qué se vende</button>
+          <button onclick="tab(4,this)">Detalle por prenda</button>
         </div>
         <div class="tabpane active">
           <div class="grid">
@@ -350,6 +353,31 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               </div>
               <div class="cwrap tall"><canvas id="c1"></canvas></div></div>
             <div class="panel col4"><div class="pt">Prendas vendidas por talla</div><div class="ph">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap tall"><canvas id="c2"></canvas></div></div>
+          </div>
+        </div>
+        <div class="tabpane">
+          <div class="grid">
+            <div class="panel col12"><div class="pt">Cada mes contra el mismo mes del año anterior</div>
+              <div class="ph" id="aacph">Barras pareadas: 2025 en gris, 2026 en verde. Solo aparecen los meses que existen en ambos años.</div>
+              <div class="cwrap tall"><canvas id="cAA"></canvas></div></div>
+            <div class="panel col12"><div class="pt">Resumen del mismo período en cada año</div>
+              <div class="ph">Compara enero–junio de un año contra enero–junio del otro, para que la comparación sea justa.</div>
+              <div class="tblwrap"><table><thead><tr><th>Período</th><th class="num">Prendas</th><th class="num">Ingreso</th><th class="num">Precio prom.</th><th class="num">Variación</th></tr></thead><tbody id="tAA"></tbody></table></div></div>
+            <div class="panel col12"><div class="pt">Estacionalidad: qué meses venden más</div>
+              <div class="ph">Promedio de ingreso por mes juntando todos los años disponibles. Sirve para saber cuándo abastecer la tienda.</div>
+              <div class="cwrap"><canvas id="cEST"></canvas></div></div>
+          </div>
+        </div>
+        <div class="tabpane">
+          <div class="kpis" id="kcli"></div>
+          <div class="insight" id="insCli"></div>
+          <div class="grid">
+            <div class="panel col6"><div class="pt">Ticket promedio por mes</div>
+              <div class="ph">Cuánto gasta un cliente en cada visita: ingreso del mes ÷ boletas del mes.</div>
+              <div class="cwrap"><canvas id="cTIC"></canvas></div></div>
+            <div class="panel col6"><div class="pt">Prendas por boleta, por mes</div>
+              <div class="ph">Cuántas prendas se lleva un cliente por visita. Subir este número suele costar menos que traer clientes nuevos.</div>
+              <div class="cwrap"><canvas id="cPPB"></canvas></div></div>
           </div>
         </div>
         <div class="tabpane">
@@ -407,7 +435,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='todo',gran='dia',
+let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
 function reindex(){
@@ -417,7 +445,7 @@ function reindex(){
   EST.forEach(function(e){NEST[e[0]]=e;});COL.forEach(function(c){NCOL[c[0]]=c;});
 }
 const nmar=c=>NMAR[c]?NMAR[c][1]:c;
-const ncat=c=>NCAT[c]?NCAT[c][1]:c+' (código antiguo)';
+const ncat=c=>NCAT[c]?NCAT[c][1]:((HIST&&HIST.nom&&HIST.nom[c])?HIST.nom[c]:c+' (código antiguo)');
 const nest=c=>NEST[c]?NEST[c][1]:c;
 const ncol=c=>NCOL[c]?NCOL[c][1]:c;
 const S=v=>'S/ '+(v||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -438,7 +466,7 @@ async function arrancar(){
     cargaCatalogos(r.datos);
     document.getElementById('carga').classList.add('oculto');
     marcaEstado(true,'Conectado');
-    asegurarVentas(false).then(function(ok){if(ok)pintaDash();});
+    Promise.all([asegurarVentas(true),asegurarHist()]).then(function(x){if(x[0])pintaDash();});
   }catch(e){
     document.getElementById('cargatxt').textContent='No se pudo conectar';
     document.getElementById('cargasub').textContent=e.message+' Revise el internet y vuelva a intentar.';
@@ -477,6 +505,18 @@ async function cargarHoy(){
     HOY=ord.map(function(k){return g[k];}).reverse();
     pintaHoy();
   }catch(e){}
+}
+/* El histórico de boletas (2025 – 18 jun 2026) alimenta solo el dashboard. */
+let HIST=null,cargandoHist=null;
+function asegurarHist(){
+  if(HIST)return Promise.resolve(true);
+  if(cargandoHist)return cargandoHist;
+  cargandoHist=api({action:'historico'}).then(function(r){
+    cargandoHist=null;
+    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cat:[],cli:null,nom:{}};return false;}
+    HIST=r.hist;return true;
+  }).catch(function(){cargandoHist=null;HIST={dia:[],cat:[],cli:null,nom:{}};return false;});
+  return cargandoHist;
 }
 /* El historial solo se descarga cuando alguien entra a Registro o Dashboard. */
 let ventasCargadas=false,cargandoVentas=null,historialCompleto=false;
@@ -540,8 +580,10 @@ function ir(v,el){
   document.querySelectorAll('.side a').forEach(function(a){a.classList.remove('active');});
   if(el)el.classList.add('active');
   document.getElementById('ttl').textContent=TIT[v][0];document.getElementById('tsub').textContent=TIT[v][1];
-  if(v==='reg'||v==='dash'){
-    asegurarVentas(false).then(function(ok){if(!ok)return;if(v==='reg')pintaReg();else pintaDash();});
+  if(v==='cfg')pintaCfg();
+  if(v==='reg'){asegurarVentas(false).then(function(ok){if(ok)pintaReg();});}
+  if(v==='dash'){
+    Promise.all([asegurarVentas(true),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
   }
   if(window.innerWidth<=900)closeNav();window.scrollTo(0,0);
 }
@@ -550,7 +592,8 @@ function closeNav(){document.body.classList.remove('nav-open');}
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeNav();document.querySelectorAll('.mback').forEach(function(m){m.classList.remove('open');});}});
 window.addEventListener('resize',function(){if(window.innerWidth>900)closeNav();});
 function tab(i,btn){document.querySelectorAll('#v-dash .tabs button').forEach(function(b){b.classList.remove('active');});
-btn.classList.add('active');document.querySelectorAll('#v-dash .tabpane').forEach(function(p,k){p.classList.toggle('active',k===i);});}
+btn.classList.add('active');document.querySelectorAll('#v-dash .tabpane').forEach(function(p,k){p.classList.toggle('active',k===i);});
+if(CH.cAA)CH.cAA.resize();if(CH.cEST)CH.cEST.resize();if(CH.cTIC)CH.cTIC.resize();}
 function toast(t,mal){const el=document.getElementById('toast');el.textContent=t;
 el.className='toast show'+(mal?' mal':'');setTimeout(function(){el.className='toast';},mal?4500:2400);}
 
@@ -598,80 +641,74 @@ function exportar(){
   a.download='ventas_tienda_lives.csv';a.click();toast('Archivo descargado');
 }
 
-/* ================= dashboard ================= */
-Chart.defaults.font.family="Calibri, Arial, sans-serif";Chart.defaults.font.size=12;
-Chart.defaults.color="#5F726C";Chart.defaults.borderColor="#F1F6F4";Chart.defaults.maintainAspectRatio=false;
-Chart.defaults.plugins.tooltip.backgroundColor='rgba(14,59,54,.95)';Chart.defaults.plugins.tooltip.padding=10;
-if(window.matchMedia('(max-width:600px)').matches){Chart.defaults.font.size=11;}
-const ROT=['#B45309','#4E6B78','#10B981','#DC2626','#F59E0B'];let CH={};
-const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
-function ddmm(f){return f.slice(8)+'/'+f.slice(5,7);}
-function setPer(p,el){per=p;document.querySelectorAll('#segper button').forEach(function(b){b.className='btn ghost';b.style.background='none';b.style.border='none';});
-el.className='btn primary';el.style.border='none';pintaDash();}
-function setGran(g,el){gran=g;document.querySelectorAll('#seggran button').forEach(function(b){b.className='btn ghost';b.style.background='none';b.style.border='none';});
-el.className='btn primary';el.style.border='none';pintaDash();}
-function agrupa(serie,desdeIdx){
-  const lab=[],val=[];
-  if(gran==='dia'){
-    for(let i=desdeIdx;i<FECHAS.length;i++){lab.push(ddmm(FECHAS[i]));val.push(serie[i]||0);}
-    return {lab:lab,val:val,nom:'día'};
-  }
-  const map=new Map();
-  for(let i=desdeIdx;i<FECHAS.length;i++){
-    const f=FECHAS[i];let k,l;
-    if(gran==='sem'){
-      const d=new Date(f+'T00:00:00'),dow=(d.getDay()+6)%7;
-      const ini=new Date(d);ini.setDate(d.getDate()-dow);
-      const fin=new Date(ini);fin.setDate(ini.getDate()+6);
-      k=ini.toISOString().slice(0,10);l=ddmm(k)+' al '+ddmm(fin.toISOString().slice(0,10));
-    }else if(gran==='mes'){k=f.slice(0,7);l=MES[parseInt(f.slice(5,7))-1]+' '+f.slice(0,4);}
-    else{k=f.slice(0,4);l=k;}
-    if(!map.has(k))map.set(k,{l:l,v:0});
-    map.get(k).v+=(serie[i]||0);
-  }
-  Array.from(map.keys()).sort().forEach(function(k){lab.push(map.get(k).l);val.push(map.get(k).v);});
-  return {lab:lab,val:val,nom:(gran==='sem'?'semana':gran==='mes'?'mes':'año')};
+const CORTE='2026-06-19';   /* desde aquí existe el registro prenda por prenda */
+/* Serie diaria unificada: histórico de boletas + ventas del sistema. */
+function serieDiaria(){
+  const m={};
+  if(HIST&&HIST.dia)HIST.dia.forEach(function(d){
+    m[d[0]]={b:d[1],u:d[2],i:d[3]};
+  });
+  const tk={};
+  VENTAS.forEach(function(v){
+    if(!m[v.f])m[v.f]={b:0,u:0,i:0};
+    m[v.f].u+=v.q;m[v.f].i+=v.q*v.p;
+    if(v.tk){const k=v.f+'|'+v.tk;if(!tk[k]){tk[k]=1;m[v.f].b++;}}
+  });
+  return m;
 }
 function pintaDash(){
-  if(!FECHAS.length)return;
-  const nd=FECHAS.length,desde=per==='todo'?0:(per==='30'?Math.max(0,nd-30):Math.max(0,nd-7));
-  const fdesde=FECHAS[desde],fm=document.getElementById('fmarcaD').value;
-  const V=VENTAS.filter(function(v){return v.f>=fdesde&&(!fm||v.ma===fm);});
-  const ing=V.reduce(function(a,v){return a+v.q*v.p;},0),uni=V.reduce(function(a,v){return a+v.q;},0);
-  const dias=new Set(V.map(function(v){return v.f;})).size;
-  const win=nd-desde,pi=Math.max(0,desde-win),fprev=FECHAS[pi];
-  const prev=VENTAS.filter(function(v){return v.f>=fprev&&v.f<fdesde&&(!fm||v.ma===fm);});
-  const ingPrev=prev.reduce(function(a,v){return a+v.q*v.p;},0);
+  const M=serieDiaria(),fechas=Object.keys(M).sort();
+  if(!fechas.length)return;
+  const hoy=hoyISO();
+  let desdeF;
+  if(per==='todo')desdeF=fechas[0];
+  else if(per==='tienda')desdeF=CORTE;
+  else{const d=new Date();d.setDate(d.getDate()-parseInt(per));
+       desdeF=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  const conHist=desdeF<CORTE;
+  FECHAS=fechas.filter(function(f){return f>=desdeF;});
+  /* KPIs sobre la serie unificada */
+  let ing=0,uni=0,bol=0,dias=0,ingB=0,uniB=0;
+  FECHAS.forEach(function(f){const d=M[f];ing+=d.i;uni+=d.u;bol+=d.b;if(d.i>0)dias++;
+    if(d.b>0){ingB+=d.i;uniB+=d.u;}});
+  /* período anterior del mismo largo */
+  const iDesde=fechas.indexOf(FECHAS[0]),largo=FECHAS.length;
+  const prevF=fechas.slice(Math.max(0,iDesde-largo),iDesde);
+  let ingPrev=0;prevF.forEach(function(f){ingPrev+=M[f].i;});
   let dh='';
   if(ingPrev>0){const dl=(ing-ingPrev)/ingPrev*100;dh='<span class="d '+(dl>=0?'up':'down')+'">'+(dl>=0?'▲':'▼')+' '+Math.abs(dl).toFixed(1)+'%</span>';}
-  const idx={};FECHAS.forEach(function(f,i){idx[f]=i;});
-  const serie=new Array(nd).fill(0);V.forEach(function(v){serie[idx[v.f]]+=v.q*v.p;});
-  const G=agrupa(serie,desde);
-  const combos={};V.forEach(function(v){const k=llave(v);if(!combos[k])combos[k]={i:0,u:0,v:v};combos[k].i+=v.q*v.p;combos[k].u+=v.q;});
-  const ord=Object.keys(combos).map(function(k){return [k,combos[k].i];}).sort(function(a,b){return b[1]-a[1];});
+  const serie=FECHAS.map(function(f){return M[f].i;});
   function kpi(l,v,cls,s){return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v">'+v+'</span></div><div class="s">'+s+'</div></div>';}
   document.getElementById('kdash').innerHTML=
     '<div class="kpi money"><div class="l">Ingresos del período</div><div class="row"><span class="v">'+S(ing)+'</span>'+dh+'</div>'+
     '<div class="s">'+(ingPrev>0?'vs '+S(ingPrev)+' del período anterior':'sin período anterior comparable')+'</div><div class="spark"><canvas id="sp1"></canvas></div></div>'+
     kpi('Prendas vendidas',N(uni),'','en '+dias+' días con venta')+
-    kpi('Precio promedio',S(uni?ing/uni:0),'','ingreso ÷ unidades (ponderado)')+
-    kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta')+
-    kpi('Combinaciones vendidas',N(ord.length),'','prenda + color + talla distintos');
-  let acc=0,n80=0;for(let i=0;i<ord.length;i++){acc+=ord[i][1];n80++;if(acc>=ing*0.8)break;}
-  const porMa={};V.forEach(function(v){porMa[v.ma]=(porMa[v.ma]||0)+v.q*v.p;});
-  const maOrd=Object.keys(porMa).map(function(k){return [k,porMa[k]];}).sort(function(a,b){return b[1]-a[1];});
-  const porTa={};V.forEach(function(v){porTa[v.ta]=(porTa[v.ta]||0)+v.q;});
-  const taOrd=Object.keys(porTa).map(function(k){return [k,porTa[k]];}).sort(function(a,b){return b[1]-a[1];});
-  document.getElementById('insight').innerHTML=ord.length?
-    ('<b>'+n80+' combinaciones de '+ord.length+'</b> ('+(n80/ord.length*100).toFixed(0)+
-    '%) concentran el <b>80% del ingreso</b>. La marca que más factura es <b>'+nmar(maOrd[0][0])+'</b> con '+S(maOrd[0][1])+
-    ' ('+(maOrd[0][1]/ing*100).toFixed(0)+'% del total) y la talla que más rota es <b>'+taOrd[0][0]+'</b> con '+N(taOrd[0][1])+
-    ' prendas. Cada prenda deja en promedio '+S(ing/uni)+' de ingreso; <b>el margen no se puede calcular</b> porque no hay costo cargado.'):'Sin ventas en el período elegido.';
+    kpi('Precio promedio',S(uni?ing/uni:0),'','ingreso ÷ prendas (ponderado)')+
+    (bol?kpi('Ticket promedio',S(ingB/bol),'',N(bol)+' boletas · '+(uniB/bol).toFixed(2)+' prendas por boleta'):'')+
+    kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta');
+  /* aviso cuando el período mezcla las dos fuentes */
+  const av=document.getElementById('avisoHist');
+  if(conHist){
+    av.style.display='';
+    av.innerHTML='<b>Este período incluye las boletas anteriores al 19 de junio de 2026.</b> Esas ventas registran '+
+      'tipo de prenda, cantidad y precio, pero <b>no color, talla ni marca</b>, porque en ese entonces no se registraban. '+
+      'Por eso las pestañas de talla, color y marca quedan ocultas: mezclarlas daría un gráfico falso. '+
+      'Para verlas, elija <b>Desde el 19 jun</b>.';
+  }else av.style.display='none';
+  document.querySelectorAll('#v-dash .tabs button').forEach(function(b,k){
+    if(k===3||k===4)b.style.display=conHist?'none':'';
+  });
+  if(conHist){
+    const act=document.querySelector('#v-dash .tabs button.active');
+    if(act&&act.style.display==='none')tab(0,document.querySelectorAll('#v-dash .tabs button')[0]);
+  }
+  /* ==== gráfico principal ==== */
+  const G=agrupaM(M,FECHAS);
   let mx1=-1,mi1=0;G.val.forEach(function(v,i){if(v>mx1){mx1=v;mi1=i;}});
   document.getElementById('mejorPer').innerHTML=G.val.length?
     ('Suma de precio × cantidad, agrupada por '+G.nom+'. El mejor '+G.nom+' fue <b>'+G.lab[mi1]+'</b> con '+S(mx1)+
      (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
-  drawSpark('sp1',serie.slice(desde));
+  drawSpark('sp1',serie);
   if(gran==='dia'){
     draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
       pointRadius:G.val.length>40?0:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:true,
@@ -682,6 +719,136 @@ function pintaDash(){
       backgroundColor:G.val.map(function(_,i){return i===mi1?'#0B815E':'#7FB3A2';}),borderRadius:6,maxBarThickness:70}]},
       options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},x:{ticks:{maxTicksLimit:14,autoSkip:false}}}}});
   }
+  pintaAnioAnio(M);
+  pintaClientes(M,ingB,uniB,bol);
+  if(!conHist)pintaDetalle(desdeF);
+  else document.getElementById('insight').innerHTML=insightHist(M,ing,uni,bol,dias);
+}
+function agrupaM(M,fs){
+  const lab=[],val=[];
+  if(gran==='dia'){fs.forEach(function(f){lab.push(ddmm(f));val.push(M[f].i);});return {lab:lab,val:val,nom:'día'};}
+  const map=new Map();
+  fs.forEach(function(f){
+    let k,l;
+    if(gran==='sem'){
+      const d=new Date(f+'T00:00:00'),dow=(d.getDay()+6)%7;
+      const ini=new Date(d);ini.setDate(d.getDate()-dow);
+      const fin=new Date(ini);fin.setDate(ini.getDate()+6);
+      k=ini.toISOString().slice(0,10);l=ddmm(k)+' al '+ddmm(fin.toISOString().slice(0,10));
+    }else if(gran==='mes'){k=f.slice(0,7);l=MES[parseInt(f.slice(5,7))-1].slice(0,3)+' '+f.slice(0,4);}
+    else{k=f.slice(0,4);l=k;}
+    if(!map.has(k))map.set(k,{l:l,v:0});
+    map.get(k).v+=M[f].i;
+  });
+  Array.from(map.keys()).sort().forEach(function(k){lab.push(map.get(k).l);val.push(map.get(k).v);});
+  return {lab:lab,val:val,nom:(gran==='sem'?'semana':gran==='mes'?'mes':'año')};
+}
+function insightHist(M,ing,uni,bol,dias){
+  return 'En el período elegido se vendieron <b>'+N(uni)+' prendas</b> por <b>'+S(ing)+'</b>'+
+    (bol?', en '+N(bol)+' boletas: <b>'+S(ing/bol)+' por cliente</b> y '+(uni/bol).toFixed(2)+' prendas cada uno':'')+
+    '. El precio promedio por prenda fue '+S(ing/uni)+'. <b>No se puede calcular utilidad</b> porque no hay costo cargado.';
+}
+/* ==== año contra año + estacionalidad ==== */
+function pintaAnioAnio(M){
+  const mes={};
+  Object.keys(M).forEach(function(f){
+    const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
+    mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
+  });
+  const anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
+  const labels=MES.map(function(m){return m.slice(0,3);});
+  const COLA=['#9CB3AC','#0F7A5A','#B45309','#4E6B78'];
+  const ds=anios.map(function(a,i){
+    return {label:a,data:labels.map(function(_,k){
+      const key=a+'-'+('0'+(k+1)).slice(-2);return mes[key]?mes[key].i:null;}),
+      backgroundColor:COLA[i%4],borderRadius:5,maxBarThickness:26};
+  });
+  draw('cAA',{type:'bar',data:{labels:labels,datasets:ds},
+    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:12}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
+  /* tabla: mismo tramo de meses en cada año */
+  const comunes=[];
+  for(let k=1;k<=12;k++){
+    const kk=('0'+k).slice(-2);
+    if(anios.every(function(a){return mes[a+'-'+kk];}))comunes.push(kk);
+  }
+  let filas='',prev=null;
+  const tramo=comunes.length?(MES[parseInt(comunes[0])-1]+'–'+MES[parseInt(comunes[comunes.length-1])-1]):'';
+  anios.forEach(function(a){
+    let i=0,u=0;comunes.forEach(function(kk){i+=mes[a+'-'+kk].i;u+=mes[a+'-'+kk].u;});
+    let vr='—';
+    if(prev!==null&&prev>0){const d=(i-prev)/prev*100;
+      vr='<span class="pill '+(d>=0?'ok':'bad')+'">'+(d>=0?'+':'')+d.toFixed(1)+'%</span>';}
+    filas+='<tr><td style="font-weight:700">'+tramo+' '+a+'</td><td class="num">'+N(u)+'</td>'+
+      '<td class="num" style="font-weight:700">'+S(i)+'</td><td class="num">'+S(u?i/u:0)+'</td><td class="num">'+vr+'</td></tr>';
+    prev=i;
+  });
+  document.getElementById('tAA').innerHTML=filas||'<tr><td colspan="5">Todavía no hay dos años para comparar.</td></tr>';
+  document.getElementById('aacph').innerHTML=comunes.length?
+    ('Barras pareadas por mes. La tabla de abajo compara solo <b>'+tramo+'</b>, que son los meses que existen en todos los años; comparar un año completo contra medio año no diría nada.'):
+    'Barras pareadas por mes.';
+  /* estacionalidad: promedio por mes calendario */
+  const prom=labels.map(function(_,k){
+    const kk=('0'+(k+1)).slice(-2),vs=[];
+    anios.forEach(function(a){if(mes[a+'-'+kk])vs.push(mes[a+'-'+kk].i);});
+    return vs.length?vs.reduce(function(x,y){return x+y;},0)/vs.length:null;});
+  let mmax=-1,imax=0;prom.forEach(function(v,i){if(v!==null&&v>mmax){mmax=v;imax=i;}});
+  draw('cEST',{type:'bar',data:{labels:labels,datasets:[{data:prom,
+    backgroundColor:prom.map(function(_,i){return i===imax?'#0B815E':'#7FB3A2';}),borderRadius:5,maxBarThickness:44}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
+}
+/* ==== clientes y tickets ==== */
+function pintaClientes(M,ing,uni,bol){
+  /* Solo se promedian los días que tienen boletas contadas. Si un mes mezcla
+     días con boleta y días sin ella, se usa únicamente la parte con boleta:
+     dividir todo el ingreso entre media docena de boletas daría un ticket falso. */
+  const mes={};
+  Object.keys(M).forEach(function(f){
+    if(!M[f].b)return;
+    const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
+    mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
+  });
+  const ks=Object.keys(mes).sort().filter(function(k){return mes[k].b>0;});
+  const lab=ks.map(function(k){return MES[parseInt(k.slice(5,7))-1].slice(0,3)+' '+k.slice(2,4);});
+  draw('cTIC',{type:'line',data:{labels:lab,datasets:[{data:ks.map(function(k){return mes[k].i/mes[k].b;}),
+    borderColor:'#B45309',borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:'#B45309',pointBorderColor:'#fff',fill:false}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,ticks:{callback:function(v){return 'S/ '+Math.round(v);}}}}}});
+  draw('cPPB',{type:'line',data:{labels:lab,datasets:[{data:ks.map(function(k){return mes[k].u/mes[k].b;}),
+    borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:false}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}});
+  const c=HIST&&HIST.cli;
+  function kpi(l,v,cls,s){return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v">'+v+'</span></div><div class="s">'+s+'</div></div>';}
+  document.getElementById('kcli').innerHTML=
+    (bol?kpi('Ticket promedio',S(ing/bol),'money','ingreso ÷ boletas del período'):'')+
+    (bol?kpi('Prendas por boleta',(uni/bol).toFixed(2),'','cuántas se lleva cada cliente por visita'):'')+
+    (c?kpi('Clientes distintos',N(c.clientes),'','con documento, ene 2025 – jun 2026'):'')+
+    (c?kpi('Volvieron a comprar',N(c.repiten),'',(c.repiten/c.clientes*100).toFixed(0)+'% de los clientes'):'');
+  document.getElementById('insCli').innerHTML=c?
+    ('De <b>'+N(c.clientes)+' clientes</b> con documento entre enero 2025 y junio 2026, <b>'+N(c.repiten)+
+     '</b> compraron más de una vez ('+(c.repiten/c.clientes*100).toFixed(0)+'%) y generaron <b>'+
+     (c.ingresoRepiten/c.ingreso*100).toFixed(0)+'% del ingreso</b> ('+S(c.ingresoRepiten)+' de '+S(c.ingreso)+'). '+
+     'En promedio cada cliente dejó '+S(c.ingreso/c.clientes)+' y volvió '+(c.boletas/c.clientes).toFixed(1)+' veces. '+
+     'El negocio depende de que esa gente regrese, no de traer gente nueva.'):
+    'Los datos de clientes vienen del histórico de boletas. El sistema nuevo recién empieza a registrarlos.';
+}
+/* ==== detalle por prenda (solo período con registro completo) ==== */
+function pintaDetalle(desdeF){
+  const fm=document.getElementById('fmarcaD').value;
+  const V=VENTAS.filter(function(v){return v.f>=desdeF&&(!fm||v.ma===fm);});
+  const ing=V.reduce(function(a,v){return a+v.q*v.p;},0),uni=V.reduce(function(a,v){return a+v.q;},0);
+  const combos={};V.forEach(function(v){const k=llave(v);if(!combos[k])combos[k]={i:0,u:0,v:v};combos[k].i+=v.q*v.p;combos[k].u+=v.q;});
+  const ord=Object.keys(combos).map(function(k){return [k,combos[k].i];}).sort(function(a,b){return b[1]-a[1];});
+  let acc=0,n80=0;for(let i=0;i<ord.length;i++){acc+=ord[i][1];n80++;if(acc>=ing*0.8)break;}
+  const porMa={};V.forEach(function(v){porMa[v.ma]=(porMa[v.ma]||0)+v.q*v.p;});
+  const maOrd=Object.keys(porMa).map(function(k){return [k,porMa[k]];}).sort(function(a,b){return b[1]-a[1];});
+  const porTa={};V.forEach(function(v){porTa[v.ta]=(porTa[v.ta]||0)+v.q;});
+  const taOrd=Object.keys(porTa).map(function(k){return [k,porTa[k]];}).sort(function(a,b){return b[1]-a[1];});
+  document.getElementById('insight').innerHTML=ord.length?
+    ('<b>'+n80+' combinaciones de '+ord.length+'</b> ('+(n80/ord.length*100).toFixed(0)+
+    '%) concentran el <b>80% del ingreso</b>. La marca que más factura es <b>'+nmar(maOrd[0][0])+'</b> con '+S(maOrd[0][1])+
+    ' ('+(maOrd[0][1]/ing*100).toFixed(0)+'%) y la talla que más rota es <b>'+taOrd[0][0]+'</b> con '+N(taOrd[0][1])+
+    ' prendas. Cada prenda deja en promedio '+S(ing/uni)+'; <b>el margen no se puede calcular</b> porque no hay costo cargado.'):
+    'Sin ventas en el período elegido.';
   const tal=taOrd.slice(0,7);
   draw('c2',{type:'doughnut',data:{labels:tal.map(function(t){return 'Talla '+t[0];}),datasets:[{data:tal.map(function(t){return t[1];}),
     backgroundColor:tal.map(function(_,i){return ROT[i%5];}),borderWidth:0}]},
