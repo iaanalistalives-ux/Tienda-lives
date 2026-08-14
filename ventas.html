@@ -179,6 +179,18 @@ padding:5px;border-radius:10px;}
 color:var(--stone);padding:13px 6px;border-radius:7px;cursor:pointer;line-height:1.25;}
 .modos button.on{background:var(--sage);color:#fff;box-shadow:var(--sh);}
 .modos button.on.exc{background:var(--taupe);}
+.exclu{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 12px;border-radius:10px;
+border:2px solid var(--warm);cursor:pointer;background:#fff;}
+.exclu:hover{border-color:var(--taupe);}
+.exclu.on{border-color:var(--taupe);background:#FEF3E2;}
+.exclu .sw2{width:46px;height:26px;border-radius:20px;background:var(--warm);flex:none;position:relative;transition:background .15s;}
+.exclu .sw2 span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;}
+.exclu.on .sw2{background:var(--taupe);}
+.exclu.on .sw2 span{left:23px;}
+.exclu .t1{font-size:14.5px;font-weight:700;color:#33413D;}
+.exclu.on .t1{color:var(--taupe);}
+.exclu .t2{font-size:11.5px;color:var(--stone);}
 .avisomodo{font-size:12.5px;font-weight:700;padding:9px 12px;border-radius:8px;margin-top:10px;}
 .avisomodo.col{background:#E7F4EF;color:var(--sage-dark);}
 .avisomodo.exc{background:#FEF3E2;color:var(--taupe);}
@@ -331,7 +343,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         <div class="panel">
           <div class="pt">Registro de ventas</div>
           <div class="ph">Solo consulta: desde esta página no se puede registrar, corregir ni anular ninguna venta. Incluye el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Al abrir se cargan los últimos 90 días; con "Cargar todo el historial" se ve desde el inicio. Se muestran las 400 líneas más recientes del filtro.</div>
-          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Modo</th></tr></thead><tbody id="treg"></tbody></table></div>
+          <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Tipo de cliente</th></tr></thead><tbody id="treg"></tbody></table></div>
           <div class="ph" id="regcount" style="margin-top:10px"></div>
         </div>
       </section>
@@ -474,7 +486,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico';
+let modo='Publico',exclusivo=false;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -522,7 +534,7 @@ function cargaCatalogos(d){
 function mapVentas(rows){
   return (rows||[]).map(function(v){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||''};
   });
 }
 function recalcFechas(){
@@ -538,7 +550,7 @@ async function cargarHoy(){
     const g={},ord=[];
     mapVentas(r.ventas).filter(function(v){return v.f===hoy;}).forEach(function(v){
       const k=v.tk||('sin-'+v.h);
-      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',modo:v.modo||'',lineas:[]};ord.push(k);}
+      if(!g[k]){g[k]={tk:v.tk||'',h:v.h||'',u:0,t:0,pago:v.pago||'',cli:v.cli||'',dni:v.dni||'',cel:v.cel||'',modo:v.modo||'',exc:(v.exc==='SI'),lineas:[]};ord.push(k);}
       g[k].u+=v.q;g[k].t+=v.q*v.p;
       g[k].lineas.push({ma:v.ma,ca:v.ca,es:v.es,co:v.co,ta:v.ta,q:v.q,p:v.p});
     });
@@ -665,7 +677,8 @@ function pintaReg(){
     return '<tr><td>'+v.f+'</td><td>'+(v.h||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
-    '<td>'+(v.modo&&v.modo!=='Publico'?'<span class="pill warn">'+v.modo+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
+    '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
+      (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
   document.getElementById('regcount').textContent='Mostrando '+Math.min(r.length,400)+' de '+N(r.length)+' líneas.';
 }
 function unDia(){
