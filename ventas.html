@@ -551,7 +551,8 @@ function cargaCatalogos(d){
 function mapVentas(rows){
   return (rows||[]).map(function(v,i){
     return {f:v[0],sku:v[1],ma:v[2],ca:v[3],es:v[4],co:v[5],ta:v[6],q:v[7],p:v[8],pago:v[9],h:v[10],
-            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||'',_i:i};
+            tk:v[11]||'',cli:v[12]||'',dni:v[13]||'',cel:v[14]||'',modo:v[15]||'',lista:v[16]||0,exc:v[17]||'',
+            id:v[18]||0,_i:i};
   });
 }
 function recalcFechas(){
@@ -697,7 +698,7 @@ function pintaReg(){
     '<div class="kpi"><div class="l">Prendas vendidas</div><div class="row"><span class="v">'+N(uni)+'</span></div><div class="s">suma de cantidades</div></div>'+
     '<div class="kpi"><div class="l">Precio promedio</div><div class="row"><span class="v">'+S(uni?ing/uni:0)+'</span></div><div class="s">ingreso ÷ unidades (ponderado)</div></div>';
   document.getElementById('treg').innerHTML=r.slice(0,400).map(function(v){
-    return '<tr><td>'+v.f+'</td><td>'+(v.h||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
+    return '<tr><td>'+v.f+'</td><td>'+(hhmm(v.h)||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
     '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
