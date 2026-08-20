@@ -17,6 +17,13 @@ line-height:1.45;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%
 position:sticky;top:0;height:100vh;transition:width .18s ease;}
 .side .brand{padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.14);}
 .side .brand img{height:34px;display:block;}
+.quien{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.14);}
+.quien label{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+color:#7FA69C;margin-bottom:5px;}
+.quien select{width:100%;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);
+border-radius:8px;padding:9px 10px;font-family:inherit;font-size:14px;font-weight:700;}
+.quien select option{color:#333;}
+body.nav-collapsed .quien{display:none;}
 .side nav{padding:12px 0;overflow-y:auto;flex:1;}
 .side .ngrp{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:#7FA69C;padding:12px 16px 6px;}
 .side a{display:flex;align-items:center;gap:10px;color:#C7DAD5;font-size:14px;padding:11px 16px;
@@ -31,8 +38,10 @@ body.nav-collapsed .side .foot,body.nav-collapsed .side .brand img{display:none;
 .main{flex:1;min-width:0;}
 .topbar{background:var(--petrol);border-bottom:3px solid var(--emer);min-height:64px;display:flex;
 align-items:center;gap:14px;padding:0 20px;position:sticky;top:0;z-index:20;}
-.topbar .burger{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;
-width:32px;height:32px;cursor:pointer;font-size:15px;line-height:1;}
+.burger2{background:#fff;border:1px solid var(--warm);color:var(--sage-dark);border-radius:8px;
+padding:8px 14px;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;
+box-shadow:var(--sh);margin-bottom:12px;display:inline-flex;align-items:center;gap:6px;}
+.burger2:hover{border-color:var(--sage);background:#E7F4EF;}
 .htitle{color:#fff;font-size:17px;font-weight:700;}.hsub{color:#B9CFC9;font-size:11.5px;}
 .hright{margin-left:auto;display:flex;align-items:center;gap:12px;}
 .hright select{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);
@@ -276,7 +285,8 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
  .side .brand{padding:14px 0;text-align:center;min-height:52px;}
  .side a{justify-content:center;padding:13px 0;}.side .ico{font-size:17px;}
  body.nav-open .side{position:fixed;width:264px;z-index:60;box-shadow:0 0 40px rgba(0,0,0,.35);}
- body.nav-open .side .txt,body.nav-open .side .ngrp,body.nav-open .side .foot{display:block;}
+ .side .quien{display:none;}
+ body.nav-open .side .txt,body.nav-open .side .ngrp,body.nav-open .side .foot,body.nav-open .side .quien{display:block;}
  body.nav-open .side .brand img{display:block;}
  body.nav-open .side .brand{padding:16px 16px 14px;text-align:left;}
  body.nav-open .side a{justify-content:flex-start;padding:11px 16px;}}
@@ -330,13 +340,13 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   </aside>
   <div class="main">
     <div class="topbar">
-      <button class="burger" onclick="toggleNav()">☰</button>
       <div><div class="htitle" id="ttl">Dashboard de ventas</div><div class="hsub" id="tsub">Tienda LIVES · solo consulta</div></div>
       <div class="hright">
         <div class="estado"><span class="punto" id="punto"></span><span class="txt3" id="estadotxt">Conectado</span></div>
       </div>
     </div>
     <div class="wrap">
+      <button class="burger2" onclick="toggleNav()" title="Mostrar u ocultar el menú">☰ Menú</button>
       <div class="alerta" id="alerta"></div>
 
       <!-- ============ REGISTRO ============ -->
