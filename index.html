@@ -61,7 +61,13 @@ border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;font-weigh
 box-shadow:var(--sh);padding:12px 16px;margin-bottom:14px;font-size:13.5px;color:#8a1c1c;display:none;}
 .alerta.ver{display:block;}
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border-radius:var(--r);
-box-shadow:var(--sh);padding:10px 14px;margin-bottom:14px;}
+box-shadow:var(--sh);padding:10px 14px;margin-bottom:14px;position:sticky;top:0;z-index:15;}
+/* Pastilla deslizante del estándar v2: reemplaza a los botones sueltos. */
+.seg{display:inline-flex;background:var(--warm-light);border-radius:8px;padding:3px;gap:2px;}
+.seg button{background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;
+color:var(--stone);padding:6px 14px;border-radius:6px;cursor:pointer;}
+.seg button:hover{color:var(--sage);}
+.seg button.active{background:var(--sage);color:#fff;box-shadow:var(--sh);}
 select,input[type=text],input[type=number],input[type=search],input[type=date]{font-family:inherit;
 font-size:14px;font-weight:600;color:#333;border:1px solid var(--warm);border-radius:8px;padding:9px 12px;background:#fff;}
 .btn{font-family:inherit;font-size:14px;font-weight:700;border-radius:8px;padding:9px 15px;cursor:pointer;
@@ -79,17 +85,22 @@ border:1px solid var(--warm);background:#fff;color:var(--sage);}
 .panel .pt{font-size:15px;font-weight:700;}
 .panel .ph{font-size:11.5px;color:var(--stone);margin:2px 0 12px;}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px;}
-.kpi{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;position:relative;overflow:hidden;}
+.kpi{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;position:relative;
+overflow:hidden;transition:box-shadow .15s,transform .15s;}
+.kpi:hover{box-shadow:var(--sh-h);transform:translateY(-1px);}
 .kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--sage);}
 .kpi.money::after{background:var(--taupe);}
 .kpi .l{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--stone);}
 .kpi .row{display:flex;align-items:baseline;gap:8px;margin-top:5px;}
-.kpi .v{font-size:30px;font-weight:700;line-height:1;color:var(--sage);}
+.kpi .v{font-size:32px;font-weight:700;line-height:1;color:var(--sage);}
 .kpi.money .v{color:var(--taupe);}
 .kpi .d{font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;}
 .d.up{color:var(--sage);background:#E7F4EF;}.d.down{color:var(--rose);background:#FCEBEB;}
 .kpi .s{font-size:11.5px;color:var(--stone);margin-top:3px;}
 .kpi .spark{height:26px;margin-top:6px;}
+.note{background:var(--card);border-left:4px solid var(--tan);border-radius:0 var(--r) var(--r) 0;
+box-shadow:var(--sh);padding:12px 16px;font-size:13px;color:var(--stone);}
+.note b{color:var(--sage-dark);}
 .insight{background:var(--card);border-left:4px solid var(--tan);border-radius:0 var(--r) var(--r) 0;
 box-shadow:var(--sh);padding:12px 16px;margin-bottom:16px;font-size:13.5px;}.insight b{color:var(--sage-dark);}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--warm);margin:22px 0 14px;flex-wrap:wrap;}
@@ -311,7 +322,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
  .topbar{min-height:56px;padding:0 12px;}.topbar .htitle{font-size:14px;}
  .topbar .burger{width:40px;height:40px;font-size:17px;}
  .hright .estado span.txt3{display:none;}
- .bar{flex-wrap:nowrap;overflow-x:auto;padding:8px 10px;gap:8px;}.bar>*{flex:none;}.spacer{display:none;}
+ .bar{position:static;flex-wrap:nowrap;overflow-x:auto;padding:8px 10px;gap:8px;-webkit-overflow-scrolling:touch;}
+ .bar::-webkit-scrollbar{display:none;}
+ .bar>*{flex:none;}.spacer{display:none;}
+ .seg button{min-height:44px;font-size:14px;}
  .btn,select,input{min-height:44px;}
  .kpis{grid-template-columns:1fr;}.kpi .v{font-size:26px;}.kpi .spark{display:none;}
  .cwrap,.cwrap.tall{height:260px;}.panel{padding:14px;}
@@ -517,11 +531,11 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       <!-- ============ DASHBOARD ============ -->
       <section id="v-dash" style="display:none">
         <div class="bar no-print">
-          <div id="segper" style="display:inline-flex;background:var(--warm-light);border-radius:8px;padding:3px;gap:2px">
-            <button class="btn ghost" style="border:none;background:none" onclick="setPer('7',this)">7 días</button>
-            <button class="btn ghost" style="border:none;background:none" onclick="setPer('30',this)">30 días</button>
-            <button class="btn primary" style="border:none" onclick="setPer('tienda',this)">Desde el 19 jun</button>
-            <button class="btn ghost" style="border:none;background:none" onclick="setPer('todo',this)">Todo (desde 2025)</button>
+          <div class="seg" id="segper">
+            <button onclick="setPer('7',this)">7 días</button>
+            <button onclick="setPer('30',this)">30 días</button>
+            <button class="active" onclick="setPer('tienda',this)">Desde el 19 jun</button>
+            <button onclick="setPer('todo',this)">Todo (desde 2025)</button>
           </div>
           <select id="fmarcaD" onchange="pintaDash()"></select>
           <span class="spacer"></span>
@@ -544,18 +558,14 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <div class="grid">
             <div class="panel col8"><div class="pt">Ingresos en el tiempo</div>
               <div class="ph" id="mejorPer">Suma de precio × cantidad de cada línea vendida.</div>
-              <div class="no-print" id="seggran" style="display:inline-flex;background:var(--warm-light);border-radius:8px;padding:3px;gap:2px;margin-bottom:10px">
-                <button class="btn primary" style="border:none" onclick="setGran('dia',this)">Por día</button>
-                <button class="btn ghost" style="border:none;background:none" onclick="setGran('sem',this)">Por semana</button>
-                <button class="btn ghost" style="border:none;background:none" onclick="setGran('mes',this)">Por mes</button>
-                <button class="btn ghost" style="border:none;background:none" onclick="setGran('ano',this)">Por año</button>
-              </div>
+              <div class="seg no-print" id="seggran" style="margin-bottom:10px"></div>
               <div class="cwrap tall"><canvas id="c1"></canvas></div></div>
             <div class="panel col4"><div class="pt">Prendas vendidas por talla</div><div class="ph">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap tall"><canvas id="c2"></canvas></div></div>
           </div>
         </div>
         <div class="tabpane">
           <div class="grid">
+            <div class="note col12" id="notaAnios" style="grid-column:span 12"></div>
             <div class="panel col12"><div class="pt">Cada mes contra el mismo mes del año anterior</div>
               <div class="ph" id="aacph">Barras pareadas: 2025 en gris, 2026 en verde. Solo aparecen los meses que existen en ambos años.</div>
               <div class="cwrap tall"><canvas id="cAA"></canvas></div></div>
@@ -1654,12 +1664,17 @@ async function guardarAdd(){
 Chart.defaults.font.family="Calibri, Arial, sans-serif";Chart.defaults.font.size=12;
 Chart.defaults.color="#5F726C";Chart.defaults.borderColor="#F1F6F4";Chart.defaults.maintainAspectRatio=false;
 Chart.defaults.plugins.tooltip.backgroundColor='rgba(14,59,54,.95)';Chart.defaults.plugins.tooltip.padding=10;
-if(window.matchMedia('(max-width:600px)').matches){Chart.defaults.font.size=11;}
+Chart.defaults.plugins.tooltip.cornerRadius=6;
+if(window.matchMedia('(max-width:600px)').matches){Chart.defaults.font.size=11;Chart.defaults.plugins.legend.labels.boxWidth=10;}
 const ROT=['#B45309','#4E6B78','#10B981','#DC2626','#F59E0B'];let CH={};
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
 function ddmm(f){return f.slice(8)+'/'+f.slice(5,7);}
-function setPer(p,el){per=p;document.querySelectorAll('#segper button').forEach(function(b){b.className='btn ghost';b.style.background='none';b.style.border='none';});
-el.className='btn primary';el.style.border='none';pintaDash();}
+function setPer(p,el){
+  per=p;
+  document.querySelectorAll('#segper button').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  pintaDash();
+}
 function setGran(g,el){gran=g;pintaDash();}
 /* Con 20 meses de datos, un gráfico por día son 600 barras ilegibles.
    Se ofrecen solo las agrupaciones que se leen bien en el período elegido. */
@@ -1674,8 +1689,7 @@ function pintaBotonesGran(n){
   if(ok.indexOf(gran)<0)gran=ok[ok.length-1];
   const nom={dia:'Por día',sem:'Por semana',mes:'Por mes',ano:'Por año'};
   document.getElementById('seggran').innerHTML=ok.map(function(g){
-    return '<button class="btn '+(g===gran?'primary':'ghost')+'" style="border:none;'+(g===gran?'':'background:none')+
-      '" onclick="setGran(\''+g+'\',this)">'+nom[g]+'</button>';}).join('');
+    return '<button'+(g===gran?' class="active"':'')+' onclick="setGran(\''+g+'\',this)">'+nom[g]+'</button>';}).join('');
 }
 const CORTE='2026-06-19';   /* desde aquí existe el registro prenda por prenda */
 /* Serie diaria unificada: histórico de boletas + ventas del sistema. */
@@ -1714,14 +1728,16 @@ function pintaDash(){
   let dh='';
   if(ingPrev>0){const dl=(ing-ingPrev)/ingPrev*100;dh='<span class="d '+(dl>=0?'up':'down')+'">'+(dl>=0?'▲':'▼')+' '+Math.abs(dl).toFixed(1)+'%</span>';}
   const serie=FECHAS.map(function(f){return M[f].i;});
-  function kpi(l,v,cls,s){return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v">'+v+'</span></div><div class="s">'+s+'</div></div>';}
+  function kpi(l,v,cls,s,num,dec,pre){
+    const d=(num!==undefined)?(' data-count="'+num+'" data-dec="'+(dec||0)+'" data-pre="'+(pre||'')+'"'):'';
+    return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v"'+d+'>'+v+'</span></div><div class="s">'+s+'</div></div>';}
   document.getElementById('kdash').innerHTML=
-    '<div class="kpi money"><div class="l">Ingresos del período</div><div class="row"><span class="v">'+S(ing)+'</span>'+dh+'</div>'+
+    '<div class="kpi money"><div class="l">Ingresos del período</div><div class="row"><span class="v" data-count="'+ing+'" data-dec="2" data-pre="S/ ">'+S(ing)+'</span>'+dh+'</div>'+
     '<div class="s">'+(ingPrev>0?'vs '+S(ingPrev)+' del período anterior':'sin período anterior comparable')+'</div><div class="spark"><canvas id="sp1"></canvas></div></div>'+
-    kpi('Prendas vendidas',N(uni),'','en '+dias+' días con venta')+
-    kpi('Precio promedio',S(uni?ing/uni:0),'','ingreso ÷ prendas (ponderado)')+
-    (bol?kpi('Ticket promedio',S(ingB/bol),'',N(bol)+' boletas · '+(uniB/bol).toFixed(2)+' prendas por boleta'):'')+
-    kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta');
+    kpi('Prendas vendidas',N(uni),'','en '+dias+' días con venta',uni,0)+
+    kpi('Precio promedio',S(uni?ing/uni:0),'','ingreso ÷ prendas (ponderado)',uni?ing/uni:0,2,'S/ ')+
+    (bol?kpi('Ticket promedio',S(ingB/bol),'',N(bol)+' boletas · '+(uniB/bol).toFixed(2)+' prendas por boleta',ingB/bol,2,'S/ '):'')+
+    kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta',dias?ing/dias:0,2,'S/ ');
   /* aviso cuando el período mezcla las dos fuentes */
   const av=document.getElementById('avisoHist');
   if(conHist){
@@ -1745,6 +1761,7 @@ function pintaDash(){
   document.getElementById('mejorPer').innerHTML=G.val.length?
     ('Suma de precio × cantidad, agrupada por '+G.nom+'. El mejor '+G.nom+' fue <b>'+G.labTxt[mi1]+'</b> con '+S(mx1)+
      (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
+  animaKpis('kdash');
   drawSpark('sp1',serie);
   if(gran==='dia'){
     draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
@@ -1842,6 +1859,18 @@ function pintaAnioAnio(M){
     prev=i;
   });
   document.getElementById('tAA').innerHTML=filas||'<tr><td colspan="5">Todavía no hay dos años para comparar.</td></tr>';
+  /* Metodología del comparativo y aviso de año en curso incompleto. */
+  const na=document.getElementById('notaAnios');
+  if(na){
+    const hoy=new Date(),aAct=String(hoy.getFullYear());
+    const ultimo=Object.keys(mes).sort().pop()||'';
+    const parcial=(ultimo.slice(0,4)===aAct);
+    na.innerHTML='<b>Cómo se compara:</b> los años se superponen por mes calendario, de modo que '+
+      'enero se mide contra enero y no contra un tramo distinto. '+
+      (parcial?('<b>El año '+aAct+' está en curso</b> y su último mes ('+
+        MES[parseInt(ultimo.slice(5,7))-1]+') puede estar incompleto: leerlo como caída sería un error.'):
+        'Todos los años mostrados están completos.');
+  }
   document.getElementById('aacph').innerHTML=comunes.length?
     ('Barras pareadas por mes. La tabla de abajo compara solo <b>'+tramo+'</b>, que son los meses que existen en todos los años; comparar un año completo contra medio año no diría nada.'):
     'Barras pareadas por mes.';
@@ -1980,6 +2009,21 @@ function pintaDetalle(desdeF){
     const c=combos[o[0]];
     return '<tr><td style="font-weight:700;font-size:11.5px">'+(c.v.sku||SKU[o[0]]||'—')+'</td><td>'+descP(c.v)+'</td>'+
     '<td class="num">'+N(c.u)+'</td><td class="num">'+S(c.i)+'</td><td class="num">'+S(c.i/c.u)+'</td></tr>';}).join('');
+}
+/* Contador animado del estándar v2: el valor sube desde cero al cargar. */
+function countUp(el){
+  const end=+el.dataset.count;if(isNaN(end))return;
+  const dec=+el.dataset.dec||0,pre=el.dataset.pre||'',suf=el.dataset.suf||'';
+  const t0=performance.now();
+  (function paso(t){
+    const k=Math.min((t-t0)/900,1),e=1-Math.pow(1-k,3);
+    el.textContent=pre+(end*e).toLocaleString('es-PE',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
+    if(k<1)requestAnimationFrame(paso);
+  })(t0);
+}
+function animaKpis(cont){
+  const c=document.getElementById(cont);
+  if(c)c.querySelectorAll('.v[data-count]').forEach(countUp);
 }
 function draw(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart(document.getElementById(id),cfg);}
 function drawSpark(id,data){const el=document.getElementById(id);if(!el)return;if(CH[id])CH[id].destroy();
