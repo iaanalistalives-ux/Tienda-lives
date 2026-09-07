@@ -404,7 +404,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
                 <div class="t2">No paga ahora: se le descuenta del sueldo. Reemplaza a la forma de pago.</div></div>
               </div>
               <div class="avisomodo col" id="avisoModo" style="display:none"></div>
-              <details class="cliente" id="detCliVenta">
+              <details class="cliente" id="detCliVenta" open>
                 <summary>Datos del cliente (opcional) — <span id="cliResumen">sin datos</span></summary>
                 <div class="campos">
                   <div class="field"><label>DNI — empiece por aquí</label>
@@ -649,14 +649,16 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
 </div>
 
 <div class="mback" id="mcorr">
-  <div class="modal" style="max-width:480px">
-    <h3>Corregir línea de venta</h3>
+  <div class="modal" style="max-width:760px">
+    <h3>Corregir venta</h3>
     <div class="sub" id="corrSub">—</div>
-    <div class="frow">
-      <div class="field"><label>Cantidad</label>
-        <input id="corrCant" type="number" min="1" style="font-size:18px;font-weight:700;text-align:center"></div>
-      <div class="field"><label>Precio unitario (S/)</label>
-        <input id="corrPre" type="number" min="0" step="0.5" style="font-size:18px;font-weight:700;text-align:center"></div>
+    <div class="tblwrap" style="max-height:320px;margin-bottom:12px">
+      <table><thead><tr><th>Prenda</th><th class="num">Cantidad</th><th class="num">Precio (S/)</th><th class="num">Total</th><th class="num">Quitar</th></tr></thead>
+      <tbody id="corrLineas"></tbody></table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:10px;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--stone)">Total de la venta</span>
+      <span id="corrTotal" style="font-size:26px;font-weight:700;color:var(--taupe)">S/ 0.00</span>
     </div>
     <div class="frow">
       <div class="field"><label>Tipo de cliente</label>
@@ -678,10 +680,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
     </div>
     <div class="ph" id="corrNota" style="margin-bottom:14px"></div>
     <div class="mact" style="justify-content:space-between">
-      <button class="btn" style="color:var(--rose)" onclick="anularLineaReg()">Anular esta línea</button>
+      <button class="btn" style="color:var(--rose)" onclick="anularVentaCompleta()">Anular toda la venta</button>
       <div style="display:flex;gap:10px">
         <button class="btn ghost" onclick="cerrarCorr()">Cancelar</button>
-        <button class="btn primary" id="corrBtn" onclick="guardarCorr()">Guardar</button>
+        <button class="btn primary" id="corrBtn" onclick="guardarCorr()">Guardar cambios</button>
       </div>
     </div>
   </div>
@@ -1211,7 +1213,7 @@ function resumenCli(){
 }
 function limpiaCliVenta(){
   ['vDni','vNom','vCel','vMail'].forEach(function(i){const e=document.getElementById(i);if(e)e.value='';});
-  const d=document.getElementById('detCliVenta');if(d)d.open=false;
+  const d=document.getElementById('detCliVenta');if(d)d.open=true;
   const h=document.getElementById('vHint');if(h)h.textContent='Si ya compró antes, el nombre y el contacto se completan solos.';
   vDniBuscado='';resumenCli();
 }
@@ -1294,17 +1296,16 @@ async function guardarCli(){
   }catch(e){toast('No se pudo guardar: '+e.message,true);}
   finally{b.disabled=false;b.textContent='Guardar';}
 }
+/* Corregir abre la misma boleta que en el registro: se editan precios y
+   cantidades sin borrar nada. Antes esto anulaba la venta y devolvía las
+   prendas al carrito; si nadie volvía a cobrar, la venta desaparecía. */
 async function corregirVenta(i){
   const v=HOY[i];if(!v||!v.tk)return;
-  if(!confirm('Se va a anular esta venta de '+S(v.t)+' y sus prendas volverán a la venta actual para que la haga de nuevo. ¿Continuar?'))return;
-  const ok=await mandarAnular(v.tk);
-  if(!ok)return;
-  (v.lineas||[]).forEach(function(l){
-    const c=NCAT[l.ca];if(!c)return;
-    CART.push({ma:l.ma,ca:l.ca,es:l.es,co:l.co,ta:l.ta,q:l.q,precio:c[2]});
-  });
-  HOY.splice(i,1);pintaCart();pintaHoy();
-  toast('Venta anulada. Las prendas volvieron a la venta actual.');
+  const ok=await asegurarVentas(false);
+  if(!ok){toast('No se pudo cargar la venta',true);return;}
+  const linea=VENTAS.find(function(x){return x.tk===v.tk;});
+  if(!linea){toast('No encontré esa venta en el registro. Use Actualizar.',true);return;}
+  abrirCorr(linea.id);
 }
 async function anularVenta2(i){
   const v=HOY[i];if(!v||!v.tk)return;
@@ -1365,26 +1366,87 @@ function pintaReg(){
     ' líneas. <span style="color:var(--stone)">Toque una fila para marcarla; con las flechas ↑ ↓ se recorre y con Enter se abre Corregir.</span>';
   regSel=-1;marcaFila(0,true);
 }
-/* ==== corregir una línea desde el registro ==== */
-let corrId=null,corrExclusivo=false;
+/* ==== corregir una venta completa ==== */
+/* El botón Corregir abre toda la boleta: todas sus prendas con cantidad y
+   precio editables, más el tipo de cliente, el pago y el precio exclusivo.
+   No hay tope de precio: queda registrado quién hizo el cambio y cuándo. */
+let corrId=null,corrTk='',corrLin=[],corrExclusivo=false;
 function abrirCorr(id){
   const v=VENTAS.find(function(x){return x.id===id;});
   if(!v)return;
-  corrId=id;
-  document.getElementById('corrSub').innerHTML=v.f+(v.h?' · '+hhmm(v.h):'')+' · <b>'+descP(v)+'</b>';
-  document.getElementById('corrCant').value=v.q;
-  document.getElementById('corrPre').value=v.p;
+  corrId=id;corrTk=v.tk||'';
+  corrLin=(corrTk?VENTAS.filter(function(x){return x.tk===corrTk;}):[v])
+          .map(function(x){return {id:x.id,ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,
+                                   q:x.q,p:x.p,lista:x.lista||(NCAT[x.ca]?NCAT[x.ca][2]:0),
+                                   anular:false,abierto:false};});
+  document.getElementById('corrSub').innerHTML=v.f+(v.h?' · '+hhmm(v.h):'')+
+    ' · <b>'+corrLin.length+' prenda(s) en esta venta</b>'+(corrTk?'':' · línea suelta del Excel anterior');
   document.getElementById('corrTipo').value=(v.modo&&['Publico','Empleado','Obrero'].indexOf(v.modo)>=0)?v.modo:'Publico';
   document.getElementById('corrPago').value=v.pago||'Efectivo';
   corrExclusivo=(v.exc==='SI');
   document.getElementById('corrExc').className='exclu'+(corrExclusivo?' on':'');
-  corrCambiaTipo();
+  corrCambiaTipo();pintaCorrLineas();
   document.getElementById('corrNota').innerHTML=
-    (v.lista>0?'Precio de lista: <b>'+S(v.lista)+'</b>. No se puede cobrar más que eso. ':'')+
-    'El tipo de cliente, el pago y el precio exclusivo se aplican a <b>toda la venta</b>, no solo a esta prenda. '+
-    'Si lo que está mal es la prenda, el color o la talla, anule la línea y vuelva a registrarla.';
+    'El tipo de cliente, el pago y el precio exclusivo valen para <b>toda la venta</b>. '+
+    'La cantidad y el precio se corrigen prenda por prenda, y con <b>Cambiar prenda</b> se puede corregir la marca, '+
+    'el tipo, el estilo, el color o la talla. Cada cambio queda anotado con el nombre de quien lo hizo.';
   document.getElementById('mcorr').classList.add('open');
 }
+function selOpts(lista,val,campo,i){
+  return '<select style="font-size:12.5px;padding:5px 7px" onchange="corrSetPrenda('+i+',\''+campo+'\',this.value)">'+
+    lista.map(function(o){
+      const v=(typeof o==='string')?o:o[0], t=(typeof o==='string')?o:o[1];
+      return '<option value="'+v+'"'+(v===val?' selected':'')+'>'+t+'</option>';
+    }).join('')+'</select>';
+}
+function pintaCorrLineas(){
+  document.getElementById('corrLineas').innerHTML=corrLin.map(function(l,i){
+    const desc=ncat(l.ca)+' · '+nest(l.es)+' · '+ncol(l.co)+' · T '+l.ta+' · '+nmar(l.ma);
+    const est=l.anular?' style="opacity:.45;text-decoration:line-through"':'';
+    const editor=l.abierto
+      ? ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px">'+
+         selOpts(MAR,l.ma,'ma',i)+selOpts(CAT.map(function(c){return [c[0],c[1]];}),l.ca,'ca',i)+
+         selOpts(EST,l.es,'es',i)+selOpts(COL.map(function(c){return [c[0],c[1]];}),l.co,'co',i)+
+         selOpts(TAL,l.ta,'ta',i)+
+         '<button class="btn" style="padding:4px 8px;font-size:12px" onclick="corrToggleEditor('+i+')">Listo</button></div>')
+      : ('<button class="btn" style="padding:3px 9px;font-size:11.5px;margin-top:4px" onclick="corrToggleEditor('+i+')">Cambiar prenda</button>');
+    return '<tr'+est+'><td>'+desc+
+      (l.lista>0?'<div style="font-size:10.5px;color:var(--stone)">lista S/ '+l.lista.toFixed(2)+'</div>':'')+
+      (l.anular?'':editor)+'</td>'+
+      '<td class="num"><input type="number" min="1" value="'+l.q+'" style="width:74px;text-align:center;font-weight:700"'+
+      ' oninput="corrSet('+i+',\'q\',this.value)"'+(l.anular?' disabled':'')+'></td>'+
+      '<td class="num"><input type="number" min="0" step="0.5" value="'+l.p+'" style="width:92px;text-align:center;font-weight:700"'+
+      ' oninput="corrSet('+i+',\'p\',this.value)"'+(l.anular?' disabled':'')+'></td>'+
+      '<td class="num" style="font-weight:700">'+S(l.q*l.p)+'</td>'+
+      '<td class="num"><button class="btn" style="padding:3px 9px;font-size:12px;color:'+
+      (l.anular?'var(--sage)':'var(--rose)')+'" onclick="corrQuitar('+i+')">'+(l.anular?'Devolver':'Quitar')+'</button></td></tr>';
+  }).join('');
+  const t=corrLin.reduce(function(a,l){return a+(l.anular?0:l.q*l.p);},0);
+  document.getElementById('corrTotal').textContent=S(t);
+}
+function corrSet(i,campo,val){
+  const n=parseFloat(val);
+  corrLin[i][campo]=isNaN(n)?0:n;
+  const t=corrLin.reduce(function(a,l){return a+(l.anular?0:l.q*l.p);},0);
+  document.getElementById('corrTotal').textContent=S(t);
+  const filas=document.querySelectorAll('#corrLineas tr');
+  if(filas[i])filas[i].children[3].textContent=S(corrLin[i].q*corrLin[i].p);
+}
+function corrQuitar(i){corrLin[i].anular=!corrLin[i].anular;pintaCorrLineas();}
+function corrToggleEditor(i){corrLin[i].abierto=!corrLin[i].abierto;pintaCorrLineas();}
+/* Al cambiar el tipo de prenda el precio de lista cambia con él, y si el
+   precio cobrado era el de lista se ajusta solo. */
+function corrSetPrenda(i,campo,val){
+  const l=corrLin[i];
+  const eraLista=(l.lista>0&&Math.abs(l.p-l.lista)<0.005);
+  l[campo]=val;
+  if(campo==='ca'){
+    const c=NCAT[val];
+    if(c){l.lista=c[2];if(eraLista)l.p=c[2];}
+  }
+  pintaCorrLineas();
+}
+function cerrarCorr(){document.getElementById('mcorr').classList.remove('open');corrId=null;corrTk='';corrLin=[];}
 function corrToggleExc(){
   corrExclusivo=!corrExclusivo;
   document.getElementById('corrExc').className='exclu'+(corrExclusivo?' on':'');
@@ -1398,40 +1460,38 @@ function corrCambiaTipo(){
     if(pl)pl.disabled=true;
   }else if(pl)pl.disabled=false;
 }
-function cerrarCorr(){document.getElementById('mcorr').classList.remove('open');corrId=null;}
 async function guardarCorr(){
-  if(!corrId)return;
-  const q=parseInt(document.getElementById('corrCant').value)||0;
-  const p=parseFloat(document.getElementById('corrPre').value)||0;
-  if(q<1){toast('La cantidad debe ser mayor a cero',true);return;}
-  if(p<=0){toast('El precio debe ser mayor a cero',true);return;}
+  if(!corrLin.length)return;
+  if(corrLin.some(function(l){return !l.anular&&(!(l.q>0)||!(l.p>0));})){
+    toast('Hay una cantidad o un precio en cero',true);return;}
   const b=document.getElementById('corrBtn');b.disabled=true;b.textContent='Guardando…';
   try{
     const tipo=document.getElementById('corrTipo').value,pago=document.getElementById('corrPago').value;
-    const r=await api({action:'editar_linea',id:corrId,cantidad:q,precio:p,
-                       tipo:tipo,pago:pago,exclusivo:corrExclusivo,
-                       usuario:document.getElementById('usuario').value});
+    const r=await api({action:'editar_ticket',ticket:corrTk,
+      lineas:corrLin.map(function(l){return {id:l.id,cantidad:l.q,precio:l.p,anular:l.anular?1:0,
+        ma:l.ma,ca:l.ca,es:l.es,co:l.co,ta:l.ta};}),
+      tipo:tipo,pago:pago,exclusivo:corrExclusivo,
+      usuario:document.getElementById('usuario').value});
     if(!r.ok)throw new Error(r.error||'No se pudo corregir');
-    const v=VENTAS.find(function(x){return x.id===corrId;});
-    const tk=v?v.tk:'';
-    if(v){v.q=q;v.p=p;}
+    corrLin.forEach(function(l){
+      const v=VENTAS.find(function(x){return x.id===l.id;});
+      if(!v)return;
+      if(l.anular)VENTAS=VENTAS.filter(function(x){return x.id!==l.id;});
+      else{v.q=l.q;v.p=l.p;v.ma=l.ma;v.ca=l.ca;v.es=l.es;v.co=l.co;v.ta=l.ta;v.lista=l.lista;}
+    });
     VENTAS.forEach(function(x){
-      if(tk&&x.tk===tk){x.modo=r.tipo||tipo;x.pago=r.pago||pago;x.exc=corrExclusivo?'SI':'NO';}
+      if(corrTk&&x.tk===corrTk){x.modo=tipo;x.pago=pago;x.exc=corrExclusivo?'SI':'NO';}
     });
     cerrarCorr();pintaReg();cargarHoy();
-    toast(r.lineasVenta>1?('Corregido · la venta completa quedó como '+(r.tipo||tipo)):'Línea corregida');
+    toast('Venta corregida'+(r.anuladas?' · '+r.anuladas+' prenda(s) quitada(s)':''));
   }catch(e){toast('No se pudo corregir: '+e.message,true);}
-  finally{b.disabled=false;b.textContent='Guardar';}
+  finally{b.disabled=false;b.textContent='Guardar cambios';}
 }
-async function anularLineaReg(){
-  if(!corrId)return;
-  if(!confirm('¿Anular esta línea? Deja de contar en el registro y en el dashboard, pero no se borra: queda marcada como anulada.'))return;
-  try{
-    const r=await api({action:'anular_linea',id:corrId,usuario:document.getElementById('usuario').value});
-    if(!r.ok)throw new Error(r.error||'No se pudo anular');
-    VENTAS=VENTAS.filter(function(x){return x.id!==corrId;});
-    cerrarCorr();pintaReg();cargarHoy();toast('Línea anulada');
-  }catch(e){toast('No se pudo anular: '+e.message,true);}
+async function anularVentaCompleta(){
+  if(!corrLin.length)return;
+  if(!confirm('¿Anular toda la venta? Deja de contar en el registro y en el dashboard, pero no se borra: queda marcada como anulada.'))return;
+  corrLin.forEach(function(l){l.anular=true;});
+  await guardarCorr();
 }
 /* ==== marcar filas y recorrerlas con el teclado ==== */
 let regSel=-1;
