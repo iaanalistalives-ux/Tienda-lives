@@ -824,9 +824,9 @@ function asegurarHist(){
   if(cargandoHist)return cargandoHist;
   cargandoHist=api({action:'historico'}).then(function(r){
     cargandoHist=null;
-    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cat:[],cli:null,nom:{}};return false;}
+    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cli:null,nom:{}};return false;}
     HIST=r.hist;return true;
-  }).catch(function(){cargandoHist=null;HIST={dia:[],cat:[],cli:null,nom:{}};return false;});
+  }).catch(function(){cargandoHist=null;HIST={dia:[],cli:null,nom:{}};return false;});
   return cargandoHist;
 }
 /* El historial solo se descarga cuando alguien entra a Registro o Dashboard. */
@@ -896,7 +896,7 @@ function ir(v,el){
   if(v==='cfg')pintaCfg();
   if(v==='reg'){asegurarVentas(false).then(function(ok){if(ok)pintaReg();});}
   if(v==='dash'){
-    Promise.all([asegurarVentas(true),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
+    Promise.all([asegurarVentas(false),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
   }
   if(window.innerWidth<=900)closeNav();window.scrollTo(0,0);
 }
