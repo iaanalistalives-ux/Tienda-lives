@@ -726,7 +726,7 @@ function api(p){
   return new Promise(function(res,rej){
     const cb='cb'+(++jsonpN)+'_'+Date.now();
     const s=document.createElement('script');
-    const t=setTimeout(function(){fin();rej(new Error('El servidor no respondió a tiempo'));},45000);
+    const t=setTimeout(function(){fin();rej(new Error('El servidor no respondió a tiempo'));},90000);
     function fin(){clearTimeout(t);try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);}
     window[cb]=function(d){fin();res(d);};
     s.onerror=function(){fin();rej(new Error('No se pudo conectar. Revise el internet.'));};
@@ -743,7 +743,7 @@ function api(p){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico',exclusivo=false,planilla=false;
+let modo='Publico',exclusivo=false,planilla=false,tokenVenta='';
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -1080,12 +1080,15 @@ async function cobrar(){
   const b=document.getElementById('bcobrar');
   b.disabled=true;b.textContent='Guardando…';
   marcaEstado(null,'Guardando venta…');
+  /* Un token por intento: si hay que reintentar, va el mismo y el servidor
+     reconoce que ya la grabó en vez de duplicarla. */
+  if(!tokenVenta)tokenVenta='V'+Date.now()+'-'+Math.floor(Math.random()*10000);
   const items=CART.map(function(x){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio};});
   const total=CART.reduce(function(a,x){return a+x.q*x.precio;},0);
   const unid=CART.reduce(function(a,x){return a+x.q;},0);
   try{
     const pagoUsado=planilla?'Descuento por planilla':document.getElementById('pago').value;
-    const r=await api({action:'venta',items:items,pago:pagoUsado,
+    const r=await api({action:'venta',token:tokenVenta,items:items,pago:pagoUsado,
                        usuario:document.getElementById('usuario').value,
                        tipo:modo,exclusivo:exclusivo,
                        cliente:vCli('vNom'),dni:vCli('vDni'),celular:vCli('vCel'),correo:vCli('vMail')});
@@ -1099,7 +1102,7 @@ async function cobrar(){
     HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:exclusivo,
       pago:pagoUsado,cli:vCli('vNom'),dni:vCli('vDni'),cel:vCli('vCel'),mail:vCli('vMail'),
       lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0};})});
-    CART=[];alerta('');
+    CART=[];alerta('');tokenVenta='';
     pintaCart();pintaHoy();
     exclusivo=false;document.getElementById('exclu').className='exclu';
     planilla=false;document.getElementById('planilla').className='exclu pla';
@@ -1107,11 +1110,13 @@ async function cobrar(){
     setModo('Publico');       /* nada se queda pegado para el próximo cliente */
     cargarHoy();              /* además se re-sincroniza con la hoja, por si acaso */
     marcaEstado(true,'Guardado');
-    toast('Venta cobrada: '+S(r.total||total)+' · '+unid+' prenda(s)');
+    toast(r.duplicado?'Esa venta ya estaba guardada: no se duplicó'
+                     :('Venta cobrada: '+S(r.total||total)+' · '+unid+' prenda(s)'));
   }catch(e){
     marcaEstado(false,'No se guardó');
-    alerta('<b>La venta NO se guardó.</b> '+e.message+' La venta sigue armada abajo: cuando vuelva el internet, vuelva a tocar Cobrar. No la borre.');
-    toast('No se guardó la venta. Revise el aviso rojo.',true);
+    alerta('<b>No llegó la confirmación.</b> '+e.message+'. Puede que la venta sí se haya guardado. '+
+      '<b>Vuelva a tocar Cobrar:</b> el sistema reconoce el intento y no la va a duplicar. No borre la venta.');
+    toast('Sin confirmación. Vuelva a tocar Cobrar.',true);
   }finally{
     ocupado=false;b.textContent='Cobrar';pintaCart();
   }
