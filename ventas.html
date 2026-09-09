@@ -519,7 +519,7 @@ function api(p){
   return new Promise(function(res,rej){
     const cb='cb'+(++jsonpN)+'_'+Date.now();
     const s=document.createElement('script');
-    const t=setTimeout(function(){fin();rej(new Error('El servidor no respondió a tiempo'));},45000);
+    const t=setTimeout(function(){fin();rej(new Error('El servidor no respondió a tiempo'));},90000);
     function fin(){clearTimeout(t);try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);}
     window[cb]=function(d){fin();res(d);};
     s.onerror=function(){fin();rej(new Error('No se pudo conectar. Revise el internet.'));};
@@ -568,7 +568,7 @@ async function arrancar(){
     cargaCatalogos(r.datos);
     document.getElementById('carga').classList.add('oculto');
     marcaEstado(true,'Conectado');
-    Promise.all([asegurarVentas(true),asegurarHist()]).then(function(x){if(x[0])pintaDash();});
+    Promise.all([asegurarVentas(false),asegurarHist()]).then(function(x){if(x[0])pintaDash();});
   }catch(e){
     document.getElementById('cargatxt').textContent='No se pudo conectar';
     document.getElementById('cargasub').textContent=e.message+' Revise el internet y vuelva a intentar. Si sigue igual, avise al área de Sistemas.';
@@ -615,9 +615,9 @@ function asegurarHist(){
   if(cargandoHist)return cargandoHist;
   cargandoHist=api({action:'historico'}).then(function(r){
     cargandoHist=null;
-    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cat:[],cli:null,nom:{}};return false;}
+    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cli:null,nom:{}};return false;}
     HIST=r.hist;return true;
-  }).catch(function(){cargandoHist=null;HIST={dia:[],cat:[],cli:null,nom:{}};return false;});
+  }).catch(function(){cargandoHist=null;HIST={dia:[],cli:null,nom:{}};return false;});
   return cargandoHist;
 }
 /* El historial solo se descarga cuando alguien entra a Registro o Dashboard. */
@@ -685,7 +685,7 @@ function ir(v,el){
   if(v==='cfg')
   if(v==='reg'){asegurarVentas(false).then(function(ok){if(ok)pintaReg();});}
   if(v==='dash'){
-    Promise.all([asegurarVentas(true),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
+    Promise.all([asegurarVentas(false),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
   }
   if(window.innerWidth<=900)closeNav();window.scrollTo(0,0);
 }
