@@ -842,14 +842,13 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <button class="btn ghost" onclick="unDia()">Un solo día</button>
           <button class="btn ghost" onclick="limpiaFechas()">Quitar fechas</button>
           <span class="spacer"></span>
-          <button class="btn" onclick="cargarTodo()">Cargar todo el historial</button>
-          <button class="btn" onclick="exportar()">Descargar Excel</button>
+                    <button class="btn" onclick="exportar()">Descargar Excel</button>
           <button class="btn" onclick="recargar()">Actualizar</button>
         </div>
         <div class="kpis" id="kreg"></div>
         <div class="panel">
           <div class="pt">Registro de ventas</div>
-          <div class="ph">Todo lo vendido, incluido el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Al abrir se cargan los últimos 90 días; con "Cargar todo el historial" se ve desde el inicio. Se muestran las 400 líneas más recientes del filtro.</div>
+          <div class="ph">Todo lo vendido, incluido el historial migrado del Excel anterior. Para ver un solo día ponga la misma fecha en "Del" y "al". Se carga todo el historial desde el inicio y se muestran todas las líneas del filtro, de la más reciente a la más antigua.</div>
           <div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>SKU</th><th>Prenda</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th><th>Pago</th><th>Tipo de cliente</th><th></th></tr></thead><tbody id="treg"></tbody></table></div>
           <div class="ph" id="regcount" style="margin-top:10px"></div>
         </div>
@@ -906,8 +905,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           </div>
           <select id="fmarcaD" onchange="pintaDash()"></select>
           <span class="spacer"></span>
-          <button class="btn" onclick="cargarTodo()">Cargar todo el historial</button>
-          <button class="btn" onclick="recargar()">Actualizar</button>
+                    <button class="btn" onclick="recargar()">Actualizar</button>
           <button class="btn" onclick="window.print()">Imprimir / PDF</button>
         </div>
         <div class="kpis" id="kdash"></div>
@@ -965,7 +963,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
             <div class="panel col7"><div class="pt">Cuántas veces vuelve cada cliente</div>
               <div class="ph">Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.</div>
               <div class="cwrap"><canvas id="cFREQ"></canvas></div></div>
-            <div class="panel col12"><div class="pt">Los 25 clientes que más veces compraron</div>
+            <div class="panel col12" id="pTop"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div class="pt">Todos los clientes, de los que más veces compraron a los que menos</div><button class="btn no-print" onclick="exportarClientes()">Descargar Excel</button></div>
               <div class="ph" id="phTop">Ordenado por número de boletas. <b>Planilla</b> = qué parte de sus compras se pagó por descuento de planilla y no en efectivo. Período: enero 2025 a junio 2026.</div>
               <div class="tblwrap ancha" style="max-height:560px"><table><thead><tr>
                 <th>#</th><th>Cliente</th><th>Tipo</th><th class="num">Veces</th><th class="num">Prendas</th>
@@ -978,7 +976,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <div class="grid">
             <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph">Marca o cliente de origen de la prenda.</div><div class="cwrap"><canvas id="c3"></canvas></div></div>
             <div class="panel col6"><div class="pt">Ingresos por tipo de prenda</div><div class="ph">Los códigos marcados como antiguos vienen del Excel anterior y ya no se usan al vender.</div><div class="cwrap"><canvas id="c4"></canvas></div></div>
-            <div class="panel col12"><div class="pt">Top 12 prendas por ingreso</div><div class="ph">Ordenado por soles vendidos en el período elegido.</div><ul class="rank" id="rk"></ul></div>
+            <div class="panel col12"><div class="pt">Prendas por ingreso</div><div class="ph">Ordenado por soles vendidos en el período elegido.</div><div class="tblwrap" style="max-height:620px"><ul class="rank" id="rk"></ul></div></div>
           </div>
         </div>
         <div class="tabpane">
@@ -1282,13 +1280,13 @@ function desdeDias(n){
   return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
 }
 function asegurarVentas(todo){
-  if(ventasCargadas&&(!todo||historialCompleto))return Promise.resolve(true);
+  if(ventasCargadas)return Promise.resolve(true);
   if(cargandoVentas)return cargandoVentas;
   marcaEstado(null,'Cargando ventas…');
-  cargandoVentas=api({action:'ventas',desde:todo?'':desdeDias(90)}).then(function(r){
+  cargandoVentas=api({action:'ventas',desde:''}).then(function(r){
     if(!r.ok)throw new Error(r.error||'No se pudo cargar el historial');
     VENTAS=mapVentas(r.ventas);recalcFechas();llenaFiltros();
-    ventasCargadas=true;historialCompleto=!!todo;cargandoVentas=null;
+    ventasCargadas=true;historialCompleto=true;cargandoVentas=null;
     marcaEstado(true,'Conectado');return true;
   }).catch(function(e){
     cargandoVentas=null;marcaEstado(false,'Sin conexión');
@@ -1310,7 +1308,7 @@ async function recargar(){
     const c=await api({action:'catalogos'});
     if(!c.ok)throw new Error(c.error);
     cargaCatalogos(c.datos);guardaCatLocal(c.datos);pintaPasos();
-    const r=await api({action:'ventas',desde:historialCompleto?'':desdeDias(90)});
+    const r=await api({action:'ventas',desde:''});
     if(!r.ok)throw new Error(r.error);
     VENTAS=mapVentas(r.ventas);recalcFechas();ventasCargadas=true;llenaFiltros();
     cargarHoy();
@@ -1594,7 +1592,7 @@ function pintaHoy(){
   c.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:700;padding:6px 0;border-bottom:1px solid var(--warm);'+
   'position:sticky;top:0;background:#fff;z-index:2">'+
   '<span>'+uu+' prendas hoy</span><span style="color:var(--taupe)">'+S(tt)+'</span></div>'+
-  HOY.slice(0,20).map(function(v,i){
+  HOY.map(function(v,i){
     const acc=v.tk?('<div class="acc"><button class="cli2" onclick="abrirCli('+i+')">'+(v.cli||v.dni||v.cel?'✓ Cliente':'+ Cliente')+'</button>'+
       '<button class="corr" onclick="corregirVenta('+i+')">Corregir</button>'+
       '<button class="anu" onclick="anularVenta2('+i+')">Anular</button></div>'):'';
@@ -1812,14 +1810,14 @@ function pintaReg(){
     '<div class="kpi money"><div class="l">Ingresos del filtro</div><div class="row"><span class="v">'+S(ing)+'</span></div><div class="s">'+N(r.length)+' líneas</div></div>'+
     '<div class="kpi"><div class="l">Prendas vendidas</div><div class="row"><span class="v">'+N(uni)+'</span></div><div class="s">suma de cantidades</div></div>'+
     '<div class="kpi"><div class="l">Precio promedio</div><div class="row"><span class="v">'+S(uni?ing/uni:0)+'</span></div><div class="s">ingreso ÷ unidades (ponderado)</div></div>';
-  document.getElementById('treg').innerHTML=r.slice(0,400).map(function(v,i){
+  document.getElementById('treg').innerHTML=r.map(function(v,i){
     return '<tr onclick="marcaFila('+i+')"><td>'+v.f+'</td><td>'+(hhmm(v.h)||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
     '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
       (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td>'+
     '<td class="num">'+(v.id?'<button class="btn" style="padding:4px 10px;font-size:12px" onclick="abrirCorr('+v.id+')">Corregir</button>':'')+'</td></tr>';}).join('');
-  document.getElementById('regcount').innerHTML='Mostrando '+Math.min(r.length,400)+' de '+N(r.length)+
+  document.getElementById('regcount').innerHTML='Mostrando las '+N(r.length)+
     ' líneas. <span style="color:var(--stone)">Toque una fila para marcarla; con las flechas ↑ ↓ se recorre y con Enter se abre Corregir.</span>';
   regSel=-1;marcaFila(0,true);
 }
@@ -2316,10 +2314,10 @@ function pintaCfg(){
   if(q)l=ks.filter(function(k){
     const p=k.split('|'),o={ma:p[0],ca:p[1],es:p[2],co:p[3],ta:p[4]};
     return (SKU[k]+' '+descP(o)).toLowerCase().indexOf(q)>=0;});
-  document.getElementById('tsku').innerHTML=l.slice(0,400).map(function(k){
+  document.getElementById('tsku').innerHTML=l.map(function(k){
     const p=k.split('|'),o={ma:p[0],ca:p[1],es:p[2],co:p[3],ta:p[4]},c=NCAT[p[1]];
     return '<tr><td style="font-weight:700">'+SKU[k]+'</td><td>'+descP(o)+'</td><td class="num">'+(c?S(c[2]):'—')+'</td></tr>';}).join('');
-  document.getElementById('skucount').textContent=ks.length?('Mostrando '+Math.min(l.length,400)+' de '+N(l.length)+' códigos.'):'';
+  document.getElementById('skucount').textContent=ks.length?('Mostrando los '+N(l.length)+' códigos.'):'';
 }
 /* Lista de lo que ya existe, dentro del cuadro de agregar:
    el lápiz modifica, la equis quita. */
@@ -2530,15 +2528,18 @@ function setPer(p,el){
 function setGran(g,el){gran=g;pintaDash();}
 /* Con 20 meses de datos, un gráfico por día son 600 barras ilegibles.
    Se ofrecen solo las agrupaciones que se leen bien en el período elegido. */
-function granPermitidas(n){
+/* Todas las agrupaciones se pueden elegir. Al cambiar de período se pone la que mejor
+   se lee para ese largo (con 20 meses, "por día" son 600 barras), pero se puede cambiar. */
+function granRecomendadas(n){
   if(n<=45)return ['dia','sem'];
   if(n<=120)return ['dia','sem','mes'];
   if(n<=400)return ['sem','mes'];
   return ['mes','ano'];
 }
+let granLargo=-1;
 function pintaBotonesGran(n){
-  const ok=granPermitidas(n);
-  if(ok.indexOf(gran)<0)gran=ok[ok.length-1];
+  const rec=granRecomendadas(n),ok=['dia','sem','mes','ano'];
+  if(n!==granLargo){granLargo=n;if(rec.indexOf(gran)<0)gran=rec[rec.length-1];}
   const nom={dia:'Por día',sem:'Por semana',mes:'Por mes',ano:'Por año'};
   document.getElementById('seggran').innerHTML=ok.map(function(g){
     return '<button'+(g===gran?' class="active"':'')+' onclick="setGran(\''+g+'\',this)">'+nom[g]+'</button>';}).join('');
@@ -2780,9 +2781,8 @@ function copiaCel(n){
 function pintaQuienCompra(){
   const c=HIST&&HIST.cli;
   if(!c||!c.top){
-    document.getElementById('insQC').innerHTML='<b>Todavía no hay datos de clientes.</b> Esta pestaña se alimenta de la hoja '+
-      '<b>Historico_Clientes</b> del archivo de Google. Si ya la importó, falta publicar la última versión del script: '+
-      'Apps Script → Implementar → Administrar implementaciones → editar → Nueva versión.';
+    document.getElementById('insQC').innerHTML='<b>Todavía no hay datos de clientes.</b> Esta pestaña se alimenta del histórico de boletas '+
+      '(tabla tienda_hist_clientes en Supabase). Si sigue vacía, avise al área de Datos e IA.';
     document.getElementById('tQC').innerHTML='';
     document.getElementById('tTOP').innerHTML='';
     return;
@@ -2821,6 +2821,63 @@ function pintaQuienCompra(){
     '<td>'+(t[11]?'<span class="cel" onclick="copiaCel(\''+t[11]+'\')" title="Clic para copiar">'+t[11]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td>'+
     '<td>'+(t[12]?'<span class="cel" onclick="copiaCel(\''+t[12]+'\')" title="Clic para copiar">'+t[12]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td></tr>';}).join('');
 }
+/* Con todas las marcas y tipos a la vista, el gráfico crece con la cantidad de barras
+   para que ninguna quede aplastada. */
+function altoBarras(id,n){
+  const c=document.getElementById(id);if(!c||!c.parentNode)return;
+  c.parentNode.style.height=Math.max(260,n*26+50)+'px';
+}
+/* Más de 5 tallas: los 5 colores de marca y luego sus versiones claras, sin repetir. */
+function colorN(i){
+  const base=ROT[i%5],v=Math.floor(i/5);
+  if(!v)return base;
+  const r=parseInt(base.slice(1,3),16),g=parseInt(base.slice(3,5),16),b=parseInt(base.slice(5,7),16),k=Math.min(.75,.3*v);
+  const m=function(x){return Math.round(x+(255-x)*k);};
+  return 'rgb('+m(r)+','+m(g)+','+m(b)+')';
+}
+/* Excel de la tabla de clientes: las mismas filas y columnas que se ven en pantalla,
+   en el mismo orden. El documento va parcialmente oculto, igual que en la tabla. */
+async function exportarClientes(){
+  const c=HIST&&HIST.cli;
+  if(!c||!c.top||!c.top.length){toast('Todavía no hay datos de clientes para descargar',true);return;}
+  toast('Preparando el Excel…');
+  const ok=await cargaExcel();
+  if(!ok){toast('No se pudo cargar el generador de Excel. Revise el internet.',true);return;}
+  const filas=c.top.map(function(t,i){
+    return {n:i+1,cli:t[1],doc:t[0],tipo:t[2],veces:t[3],prendas:t[4],gasto:t[5],ticket:t[6],meses:t[7],
+      vuelve:(t[8]===''||t[8]===null||t[8]===undefined)?null:Number(t[8]),mes:t[9],
+      planilla:(t[10]===''||t[10]===null)?null:Number(t[10])/100,cel:t[11]||'',mail:t[12]||''};
+  });
+  try{
+    await exportarExcelLIVES({
+      titulo:document.title+' — Clientes que más compran',
+      sub:'Compras de enero 2025 a junio 2026 (boletas) · '+N(filas.length)+' clientes',
+      formula:'Ordenado por número de compras (boletas). Ticket = gasto ÷ compras. Planilla = parte de sus compras pagada por descuento de planilla. Documento parcialmente oculto.',
+      origen:'LIVES Tienda (Supabase)',
+      hoja:'Clientes',
+      archivo:'LIVES_Tienda_Clientes_que_mas_compran.xlsx',
+      congelarCols:2,
+      columnas:[
+        {campo:'n',titulo:'#',tipo:'entero'},
+        {campo:'cli',titulo:'Cliente',tipo:'texto'},
+        {campo:'doc',titulo:'Documento',tipo:'alfanumerico'},
+        {campo:'tipo',titulo:'Tipo',tipo:'texto'},
+        {campo:'veces',titulo:'Veces que compró',tipo:'entero'},
+        {campo:'prendas',titulo:'Prendas',tipo:'entero'},
+        {campo:'gasto',titulo:'Gasto',tipo:'moneda'},
+        {campo:'ticket',titulo:'Ticket promedio',tipo:'moneda'},
+        {campo:'meses',titulo:'Meses con compra',tipo:'entero'},
+        {campo:'vuelve',titulo:'Vuelve cada (días)',tipo:'decimal'},
+        {campo:'mes',titulo:'Mes que más compró',tipo:'texto'},
+        {campo:'planilla',titulo:'Planilla',tipo:'porcentaje'},
+        {campo:'cel',titulo:'Celular',tipo:'alfanumerico'},
+        {campo:'mail',titulo:'Correo',tipo:'texto'}
+      ],
+      filas:filas
+    });
+    toast('Excel descargado: '+N(filas.length)+' clientes');
+  }catch(e){toast('No se pudo generar el Excel: '+e.message,true);}
+}
 /* ==== detalle por prenda (solo período con registro completo) ==== */
 function pintaDetalle(desdeF){
   const fm=document.getElementById('fmarcaD').value;
@@ -2839,26 +2896,26 @@ function pintaDetalle(desdeF){
     ' ('+(maOrd[0][1]/ing*100).toFixed(0)+'%) y la talla que más rota es <b>'+taOrd[0][0]+'</b> con '+N(taOrd[0][1])+
     ' prendas. Cada prenda deja en promedio '+S(ing/uni)+'; <b>el margen no se puede calcular</b> porque no hay costo cargado.'):
     'Sin ventas en el período elegido.';
-  const tal=taOrd.slice(0,7);
+  const tal=taOrd;
   draw('c2',{type:'doughnut',data:{labels:tal.map(function(t){return 'Talla '+t[0];}),datasets:[{data:tal.map(function(t){return t[1];}),
-    backgroundColor:tal.map(function(_,i){return ROT[i%5];}),borderWidth:0}]},
+    backgroundColor:tal.map(function(_,i){return colorN(i);}),borderWidth:0}]},
     options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:12}}}}});
-  const ma=maOrd.slice(0,8);
+  const ma=maOrd;altoBarras('c3',ma.length);
   draw('c3',{type:'bar',data:{labels:ma.map(function(m){return nmar(m[0]);}),datasets:[{data:ma.map(function(m){return m[1];}),
     backgroundColor:'#0F7A5A',borderRadius:4,barThickness:16}]},
     options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
   const porCa={};V.forEach(function(v){porCa[v.ca]=(porCa[v.ca]||0)+v.q*v.p;});
-  const ca=Object.keys(porCa).map(function(k){return [k,porCa[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+  const ca=Object.keys(porCa).map(function(k){return [k,porCa[k]];}).sort(function(a,b){return b[1]-a[1];});altoBarras('c4',ca.length);
   draw('c4',{type:'bar',data:{labels:ca.map(function(c){return ncat(c[0]);}),datasets:[{data:ca.map(function(c){return c[1];}),
     backgroundColor:'#B45309',borderRadius:4,barThickness:16}]},
     options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
   const mx=ord.length?ord[0][1]:1;
-  document.getElementById('rk').innerHTML=ord.slice(0,12).map(function(o,i){
+  document.getElementById('rk').innerHTML=ord.map(function(o,i){
     const c=combos[o[0]];
     return '<li><span class="n">'+(i+1)+'</span><div><div class="nm">'+descP(c.v)+'</div><div class="sub">'+(c.v.sku||SKU[o[0]]||'')+'</div>'+
     '<div class="track"><div class="fill" data-w="'+(o[1]/mx*100)+'"></div></div></div><span class="val">'+S(o[1])+'</span></li>';}).join('');
   setTimeout(function(){document.querySelectorAll('#rk .fill').forEach(function(f){f.style.width=f.dataset.w+'%';});},120);
-  document.getElementById('tdet').innerHTML=ord.slice(0,200).map(function(o){
+  document.getElementById('tdet').innerHTML=ord.map(function(o){
     const c=combos[o[0]];
     return '<tr><td style="font-weight:700;font-size:11.5px">'+(c.v.sku||SKU[o[0]]||'—')+'</td><td>'+descP(c.v)+'</td>'+
     '<td class="num">'+N(c.u)+'</td><td class="num">'+S(c.i)+'</td><td class="num">'+S(c.i/c.u)+'</td></tr>';}).join('');
