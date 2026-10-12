@@ -732,6 +732,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
  .side,.topbar,.bar,.tabs,.no-print,details.help,.carga{display:none!important;}
  body{background:#fff!important;}.wrap{max-width:none;padding:0;}.tabpane{display:block!important;}
  .panel,.kpi,.insight{box-shadow:none;border:1px solid var(--warm);break-inside:avoid;}.cwrap{height:170px!important;}}
+.lsTope500{font-size:12px;color:#5F726C;text-align:center;padding:8px 0}
 </style>
 <style id="lsLimp2Css">/* lives-limpieza v2 · sin notas, veredictos ni paneles de título arriba */.side .brand{display:none!important}#insight,#avisoHist{display:none!important}</style>
 </head>
@@ -1179,15 +1180,28 @@ function pintaReg(){
     '<div class="kpi money"><div class="l">Ingresos del filtro</div><div class="row"><span class="v">'+S(ing)+'</span></div><div class="s">'+N(r.length)+' líneas</div></div>'+
     '<div class="kpi"><div class="l">Prendas vendidas</div><div class="row"><span class="v">'+N(uni)+'</span></div><div class="s">suma de cantidades</div></div>'+
     '<div class="kpi"><div class="l">Precio promedio</div><div class="row"><span class="v">'+S(uni?ing/uni:0)+'</span></div><div class="s">ingreso ÷ unidades (ponderado)</div></div>';
-  document.getElementById('treg').innerHTML=r.map(function(v,i){
+  /* Regla 500: sin filtros se dibujan solo las 500 líneas más recientes; los KPI usan todas. */
+  const sinFiltroReg=!(document.getElementById('rq').value||'').trim()&&!document.getElementById('rma').value&&
+    !document.getElementById('rca').value&&document.getElementById('rper').value==='0'&&
+    !document.getElementById('rd1').value&&!document.getElementById('rd2').value;
+  const rDib=(sinFiltroReg&&r.length>500)?r.slice(0,500):r;
+  pieTope500Reg(rDib.length<r.length?r.length:0);
+  document.getElementById('treg').innerHTML=rDib.map(function(v,i){
     return '<tr onclick="marcaFila('+i+')"><td>'+v.f+'</td><td>'+(hhmm(v.h)||'—')+'</td><td style="font-weight:700;font-size:11.5px">'+(v.sku||'—')+'</td>'+
     '<td>'+descP(v)+'</td><td class="num">'+v.q+'</td><td class="num">'+S(v.p)+'</td>'+
     '<td class="num" style="font-weight:700">'+S(v.q*v.p)+'</td><td>'+(v.pago||'—')+'</td>'+
     '<td>'+((v.modo&&v.modo!=='Publico')||v.exc==='SI'?'<span class="pill warn">'+(v.modo||'Publico')+
       (v.exc==='SI'?' · excl':'')+(v.lista>v.p?' -'+((v.lista-v.p)/v.lista*100).toFixed(0)+'%':'')+'</span>':'')+'</td></tr>';}).join('');
-  document.getElementById('regcount').innerHTML='Mostrando las '+N(r.length)+
+  document.getElementById('regcount').innerHTML='Mostrando las '+N(rDib.length)+
     ' líneas. <span style="color:var(--stone)">Toque una fila para marcarla; con las flechas ↑ ↓ se recorre y con Enter se abre Corregir.</span>';
   regSel=-1;marcaFila(0,true);
+}
+function pieTope500Reg(total){
+  let d=document.getElementById('lsTope500');
+  if(!d){const t=document.getElementById('treg');const w=t&&t.closest('.tblwrap');if(!w)return;
+    d=document.createElement('div');d.id='lsTope500';d.className='lsTope500';w.parentNode.insertBefore(d,w.nextSibling);}
+  if(total>500){d.textContent='Se muestran los 500 registros más recientes de '+Number(total).toLocaleString('es-PE')+'. Usa los filtros para ver los demás.';d.style.display='';}
+  else{d.textContent='';d.style.display='none';}
 }
 function unDia(){
   const a=document.getElementById('rd1'),b=document.getElementById('rd2');
