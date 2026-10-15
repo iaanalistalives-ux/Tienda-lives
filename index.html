@@ -680,7 +680,24 @@ border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;font-weigh
 .estado{font-size:11.5px;color:#B9CFC9;display:flex;align-items:center;gap:6px;}
 .punto{width:9px;height:9px;border-radius:50%;background:var(--emer);}
 .punto.mal{background:var(--rose);}.punto.carga{background:var(--tan);}
-.wrap{width:100%;max-width:1440px;margin:0 auto;padding:18px 22px 44px;}
+.wrap{width:100%;max-width:none;margin:0 auto;padding:18px 22px 44px;}
+/* Barra delgada de arriba: quién vende y las vistas de la tienda. Reemplaza al menú
+   lateral. En Vender entra en la grilla como columna de 8, para que "Venta actual"
+   suba y quede a su lado; en las demás vistas ocupa todo el ancho. */
+.tnav{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;background:var(--card);
+border-radius:var(--r);box-shadow:var(--sh);padding:7px 12px;margin-bottom:14px;}
+/* dentro de la grilla de Vender */
+#v-pos > .grid > .tnav{grid-column:1 / -1;margin-bottom:0;align-self:start;}
+.tnavQ{display:flex;align-items:center;gap:8px;min-width:0;}
+.tnavLbl{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--stone);}
+.tnavSep{width:1px;align-self:stretch;min-height:26px;background:var(--warm);}
+.tnav .vendAct{display:flex;align-items:center;gap:8px;background:var(--warm-light);color:#33413D;
+border:1.5px solid var(--warm);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:14px;
+font-weight:700;cursor:pointer;}
+.tnav .vendAct:hover{border-color:var(--sage);}
+.tnav .vendAct span{font-size:11px;font-weight:400;color:var(--stone);}
+@media(max-width:600px){.tnav{padding:7px 10px;gap:7px 10px;}.tnavLbl,.tnavSep{display:none;}
+ .tnav .seg{overflow-x:auto;max-width:100%;}}
 .alerta{background:#FCEBEB;border-left:4px solid var(--rose);border-radius:0 var(--r) var(--r) 0;
 box-shadow:var(--sh);padding:12px 16px;margin-bottom:14px;font-size:13.5px;color:#8a1c1c;display:none;}
 .alerta.ver{display:block;}
@@ -818,7 +835,20 @@ border-radius:8px;padding:8px 16px;min-width:110px;text-align:center;}
 .rtot{margin-left:auto;text-align:right;}
 .rtot .l{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--stone);}
 .rtot .v{font-size:30px;font-weight:700;color:var(--taupe);line-height:1;}
-.cart{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;position:sticky;top:78px;}
+.cart{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;}
+/* La columna de la derecha (Venta actual + Ventas de hoy) empieza arriba del todo y
+   acompaña al bajar sin taparse entre sí; si crece más que la pantalla, se desplaza
+   dentro de la misma columna. */
+@media(min-width:901px){
+ /* La barra delgada ocupa arriba a la izquierda y la columna de la derecha empieza
+    a su misma altura, sin que la barra le pase por encima. */
+ #v-pos > .grid > .tnav{grid-column:1 / span 8;grid-row:1;}
+ #v-pos > .grid > .col8:not(.tnav){grid-column:1 / span 8;grid-row:2;}
+ #v-pos > .grid > .col4{grid-column:9 / span 4;grid-row:1 / span 2;}
+ #v-pos .col4{position:sticky;top:10px;align-self:start;max-height:calc(100vh - 24px);overflow:auto;}
+ #v-pos .col4 .scrollhoy{max-height:none;overflow:visible;padding-right:0;}
+ #v-pos .col4::-webkit-scrollbar{width:8px;}
+ #v-pos .col4::-webkit-scrollbar-thumb{background:var(--warm);border-radius:4px;}}
 .cart h3{margin:0 0 4px;font-size:16px;}
 .citem{display:grid;grid-template-columns:1fr auto;gap:6px;padding:9px 0;border-bottom:1px solid var(--warm-light);}
 .citem .nm{font-size:13.5px;font-weight:700;}.citem .sk{font-size:11px;color:var(--stone);}
@@ -973,27 +1003,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   <button class="btn primary" id="cargabtn" style="display:none" onclick="arrancar()">Reintentar</button>
 </div>
 
-<div class="backdrop" onclick="closeNav()"></div>
 <div class="shell">
-  <aside class="side">
-    <div class="brand"><span class="logo" role="img" aria-label="LIVES"></span></div>
-    <button class="burgerside" onclick="toggleNav()" title="Ensanchar o angostar el menú">☰ <span class="txt">Menú</span></button>
-    <div class="quien">
-      <label>Quién vende en este equipo</label>
-      <input type="hidden" id="usuario" value="">
-      <button type="button" class="vendAct" onclick="pedirVendedora(false)" title="Cambiar quién vende">
-        <b id="vendNom">Sin elegir</b><span>cambiar</span></button>
-    </div>
-    <nav>
-      <div class="ngrp">Tienda</div>
-      <a class="active" data-v="pos" onclick="ir('pos',this)"><span class="ico">🛒</span><span class="txt">Vender</span></a>
-      <a data-v="reg" onclick="ir('reg',this)"><span class="ico">🧾</span><span class="txt">Registro de ventas</span></a>
-      <a data-v="cfg" onclick="ir('cfg',this)"><span class="ico">⚙️</span><span class="txt">Configuración</span></a>
-      <div class="ngrp">Gerencia</div>
-      <a data-v="dash" onclick="ir('dash',this)"><span class="ico">📊</span><span class="txt">Dashboard</span></a>
-    </nav>
-    <div class="foot">LIVES Tienda · v1.0</div>
-  </aside>
   <div class="main">
     <div class="topbar">
       <div><div class="htitle" id="ttl">Vender</div><div class="hsub" id="tsub">Venta presencial</div></div>
@@ -1002,7 +1012,19 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       </div>
     </div>
     <div class="wrap">
-      <button class="burger2" onclick="toggleNav()" title="Mostrar u ocultar el menú">☰ Menú</button>
+      <div class="tnav no-print" id="tnav">
+        <div class="tnavQ">
+          <span class="tnavLbl">Quién vende</span>
+          <input type="hidden" id="usuario" value="">
+          <button type="button" class="vendAct" onclick="pedirVendedora(false)" title="Cambiar quién vende">
+            <b id="vendNom">Sin elegir</b><span>cambiar</span></button>
+        </div>
+        <span class="tnavSep"></span>
+        <div class="seg segvista">
+          <button type="button" class="active" data-v="pos" onclick="ir('pos')">Vender</button>
+          <button type="button" data-v="reg" onclick="ir('reg')">Registro de ventas</button>
+        </div>
+      </div>
       <div class="alerta" id="alerta"></div>
 
       <!-- ============ VENDER ============ -->
@@ -1772,18 +1794,27 @@ function alerta(t){
 const TIT={pos:['Vender','Venta presencial'],reg:['Registro de ventas','Todo lo vendido, con filtros'],
 cfg:['Configuración','Tipos de prenda, colores, marcas, estilos y tallas'],
 dash:['Dashboard de ventas','Cómo va la tienda']};
+/* La barra delgada vive dentro de la grilla en Vender (columna de 8, para que la
+   tarjeta Venta actual suba a su lado) y arriba de todo en las demás vistas. */
+function colocaNav(v){
+  const n=document.getElementById('tnav');if(!n)return;
+  const g=document.querySelector('#v-pos > .grid'),w=document.querySelector('.wrap');
+  if(v==='pos'&&g){if(g.firstElementChild!==n)g.insertBefore(n,g.firstChild);}
+  else if(w){if(w.firstElementChild!==n)w.insertBefore(n,w.firstChild);}
+}
 function ir(v,el){
   ['pos','reg','cfg','dash'].forEach(function(k){document.getElementById('v-'+k).style.display=(k===v?'':'none');});
-  document.querySelectorAll('.side a').forEach(function(a){a.classList.remove('active');});
-  if(el)el.classList.add('active');
+  document.querySelectorAll('.segvista button[data-v]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-v')===v);});
+  colocaNav(v);
   document.getElementById('ttl').textContent=TIT[v][0];document.getElementById('tsub').textContent=TIT[v][1];
   if(v==='cfg')pintaCfg();
   if(v==='reg'){asegurarVentas(false).then(function(ok){if(ok)pintaReg();});}
   if(v==='dash'){
     Promise.all([asegurarVentas(false),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
   }
-  if(window.innerWidth<=900)closeNav();window.scrollTo(0,0);
+  window.scrollTo(0,0);
 }
+colocaNav('pos');
 function toggleNav(){if(window.innerWidth<=900)document.body.classList.toggle('nav-open');else document.body.classList.toggle('nav-collapsed');}
 function closeNav(){document.body.classList.remove('nav-open');}
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeNav();document.querySelectorAll('.mback').forEach(function(m){m.classList.remove('open');});}});

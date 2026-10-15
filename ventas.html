@@ -661,7 +661,7 @@ border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;font-weigh
 .estado{font-size:11.5px;color:#B9CFC9;display:flex;align-items:center;gap:6px;}
 .punto{width:9px;height:9px;border-radius:50%;background:var(--emer);}
 .punto.mal{background:var(--rose);}.punto.carga{background:var(--tan);}
-.wrap{width:100%;max-width:1440px;margin:0 auto;padding:18px 22px 44px;}
+.wrap{width:100%;max-width:none;margin:0 auto;padding:18px 22px 44px;}
 .alerta{background:#FCEBEB;border-left:4px solid var(--rose);border-radius:0 var(--r) var(--r) 0;
 box-shadow:var(--sh);padding:12px 16px;margin-bottom:14px;font-size:13.5px;color:#8a1c1c;display:none;}
 .alerta.ver{display:block;}
@@ -954,18 +954,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
   <button class="btn primary" id="cargabtn" style="display:none" onclick="arrancar()">Reintentar</button>
 </div>
 
-<div class="backdrop" onclick="closeNav()"></div>
 <div class="shell">
-  <aside class="side">
-    <div class="brand"><span class="logo" role="img" aria-label="LIVES"></span></div>
-    <button class="burgerside" onclick="toggleNav()" title="Ensanchar o angostar el menú">☰ <span class="txt">Menú</span></button>
-    <nav>
-      <div class="ngrp">Gerencia</div>
-      <a class="active" data-v="dash" onclick="ir('dash',this)"><span class="ico">📊</span><span class="txt">Dashboard</span></a>
-      <a data-v="reg" onclick="ir('reg',this)"><span class="ico">🧾</span><span class="txt">Registro de ventas</span></a>
-    </nav>
-    <div class="foot">LIVES Tienda · solo lectura</div>
-  </aside>
   <div class="main">
     <div class="topbar">
       <div><div class="htitle" id="ttl">Dashboard de ventas</div><div class="hsub" id="tsub">Tienda LIVES · solo consulta</div></div>
@@ -974,7 +963,6 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       </div>
     </div>
     <div class="wrap">
-      <button class="burger2" onclick="toggleNav()" title="Mostrar u ocultar el menú">☰ Menú</button>
       <div class="alerta" id="alerta"></div>
 
       <!-- ============ REGISTRO ============ -->
@@ -993,6 +981,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <input id="rd2" type="date" onchange="pintaReg()">
           <button class="btn ghost" onclick="unDia()">Un solo día</button>
           <button class="btn ghost" onclick="limpiaFechas()">Quitar fechas</button>
+          <div class="seg segvista">
+            <button type="button" data-v="dash" onclick="ir('dash')">Dashboard</button>
+            <button type="button" class="active" data-v="reg" onclick="ir('reg')">Registro de ventas</button>
+          </div>
           <span class="spacer"></span>
                     <button class="btn" onclick="exportar()">Descargar Excel</button>
         </div>
@@ -1015,6 +1007,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
             <button onclick="setPer('todo',this)">Todo (desde 2025)</button>
           </div>
           <select id="fmarcaD" onchange="pintaDash()"></select>
+          <div class="seg segvista">
+            <button type="button" class="active" data-v="dash" onclick="ir('dash')">Dashboard</button>
+            <button type="button" data-v="reg" onclick="ir('reg')">Registro de ventas</button>
+          </div>
           <span class="spacer"></span>
           <button class="btn" onclick="window.print()">Imprimir / PDF</button>
         </div>
@@ -1484,15 +1480,14 @@ const TIT={reg:['Registro de ventas','Todo lo vendido, con filtros'],
 dash:['Dashboard de ventas','Tienda LIVES · solo consulta']};
 function ir(v,el){
   ['reg','dash'].forEach(function(k){document.getElementById('v-'+k).style.display=(k===v?'':'none');});
-  document.querySelectorAll('.side a').forEach(function(a){a.classList.remove('active');});
-  if(el)el.classList.add('active');
+  document.querySelectorAll('.segvista button[data-v]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-v')===v);});
   document.getElementById('ttl').textContent=TIT[v][0];document.getElementById('tsub').textContent=TIT[v][1];
   if(v==='cfg')
   if(v==='reg'){asegurarVentas(false).then(function(ok){if(ok)pintaReg();});}
   if(v==='dash'){
     Promise.all([asegurarVentas(false),asegurarHist()]).then(function(r){if(r[0])pintaDash();});
   }
-  if(window.innerWidth<=900)closeNav();window.scrollTo(0,0);
+  window.scrollTo(0,0);
 }
 function toggleNav(){if(window.innerWidth<=900)document.body.classList.toggle('nav-open');else document.body.classList.toggle('nav-collapsed');}
 function closeNav(){document.body.classList.remove('nav-open');}
