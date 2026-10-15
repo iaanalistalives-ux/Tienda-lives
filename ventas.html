@@ -981,10 +981,6 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <input id="rd2" type="date" onchange="pintaReg()">
           <button class="btn ghost" onclick="unDia()">Un solo día</button>
           <button class="btn ghost" onclick="limpiaFechas()">Quitar fechas</button>
-          <div class="seg segvista">
-            <button type="button" data-v="dash" onclick="ir('dash')">Dashboard</button>
-            <button type="button" class="active" data-v="reg" onclick="ir('reg')">Registro de ventas</button>
-          </div>
           <span class="spacer"></span>
                     <button class="btn" onclick="exportar()">Descargar Excel</button>
         </div>
@@ -1007,10 +1003,6 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
             <button onclick="setPer('todo',this)">Todo (desde 2025)</button>
           </div>
           <select id="fmarcaD" onchange="pintaDash()"></select>
-          <div class="seg segvista">
-            <button type="button" class="active" data-v="dash" onclick="ir('dash')">Dashboard</button>
-            <button type="button" data-v="reg" onclick="ir('reg')">Registro de ventas</button>
-          </div>
           <span class="spacer"></span>
           <button class="btn" onclick="window.print()">Imprimir / PDF</button>
         </div>
