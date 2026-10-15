@@ -1027,7 +1027,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph" id="mejorPer">Suma de precio × cantidad de cada línea vendida.</div>
               <div class="seg no-print" id="seggran" style="margin-bottom:10px"></div>
               <div class="cwrap tall"><canvas id="c1"></canvas></div></div>
-            <div class="panel col4"><div class="pt">Prendas vendidas por talla</div><div class="ph" id="phTalla">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap tall"><canvas id="c2"></canvas></div></div>
+            <div class="panel col4"><div class="pt">Dónde está la plata: tipo de prenda</div><div class="ph" id="phTipoH">Ingresos por tipo de prenda.</div><div class="cwrap tall"><canvas id="cTIPO"></canvas></div></div>
           </div>
         </div>
         <div class="tabpane">
@@ -1077,7 +1077,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         <div class="tabpane">
           <div class="grid">
             <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph" id="phMarca">Marca o cliente de origen de la prenda.</div><div class="cwrap"><canvas id="c3"></canvas></div></div>
-            <div class="panel col6"><div class="pt">Ingresos por tipo de prenda</div><div class="ph" id="phTipo">Los códigos marcados como antiguos vienen del Excel anterior y ya no se usan al vender.</div><div class="cwrap"><canvas id="c4"></canvas></div></div>
+            <div class="panel col6"><div class="pt">Prendas vendidas por talla</div><div class="ph" id="phTalla">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap"><canvas id="c2"></canvas></div></div>
             <div class="panel col12"><div class="pt">Prendas por ingreso</div><div class="ph" id="phRank">Ordenado por soles vendidos en el período elegido.</div><div class="tblwrap" style="max-height:620px"><ul class="rank" id="rk"></ul></div></div>
           </div>
         </div>
@@ -1319,7 +1319,7 @@ async function api(p){
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
 let modo='Publico',exclusivo=false,planilla=false;
-let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
+let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='ano',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
 function reindex(){
@@ -1412,9 +1412,9 @@ function asegurarHist(){
   if(cargandoHist)return cargandoHist;
   cargandoHist=api({action:'historico'}).then(function(r){
     cargandoHist=null;
-    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cli:null,nom:{}};return false;}
+    if(!r.ok||!r.hist||!r.hist.dia||!r.hist.dia.length){HIST={dia:[],cat:[],cli:null,nom:{}};return false;}
     HIST=r.hist;return true;
-  }).catch(function(){cargandoHist=null;HIST={dia:[],cli:null,nom:{}};return false;});
+  }).catch(function(){cargandoHist=null;HIST={dia:[],cat:[],cli:null,nom:{}};return false;});
   return cargandoHist;
 }
 /* El historial solo se descarga cuando alguien entra a Registro o Dashboard. */
@@ -2011,7 +2011,7 @@ function serieDiaria(marca){
   return m;
 }
 function limpiaTablero(){
-  ['c1','c2','c3','c4','cAA','cEST','cTIC','cPPB','cFREQ','sp1'].forEach(function(id){
+  ['c1','c2','c3','cTIPO','cAA','cEST','cTIC','cPPB','cFREQ','sp1'].forEach(function(id){
     if(CH[id]){CH[id].destroy();delete CH[id];}});
   ['tAA','tQC','tTOP','tdet','kcli'].forEach(function(id){
     const e=document.getElementById(id);if(e)e.innerHTML='';});
@@ -2065,25 +2065,26 @@ function pintaDash(){
      (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
   animaKpis('kdash');
   drawSpark('sp1',serie);
-  if(gran==='dia'){
+  /* Una tendencia se lee en línea; solo la comparación entre años va en barras,
+     cada una con su valor en soles (15/10/2026). */
+  if(gran==='ano'){
+    draw('c1',{type:'bar',data:{labels:G.lab,datasets:[{data:G.val,lsColEtq:'#0E3B36',
+      backgroundColor:G.val.map(function(_,i){return i===mi1?'#0B815E':'#7FB3A2';}),borderRadius:6,maxBarThickness:70}]},
+      plugins:[lsEtqAnual],
+      options:{layout:{padding:{top:22}},
+        plugins:{legend:{display:false},lsEtqAnual:{display:true,fmt:lsEtqAnual.soles},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
+        x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
+  }else{
     draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
       pointRadius:G.val.length>40?0:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:true,
       backgroundColor:function(c){const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(15,122,90,.18)');g.addColorStop(1,'rgba(15,122,90,0)');return g;}}]},
       options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
         scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
         x:{ticks:{maxTicksLimit:12,maxRotation:0,minRotation:0}}}}});
-  }else{
-    /* Por año: comparación entre años, cada barra con su valor en soles (12/10/2026). */
-    const porAnio=(gran==='ano');
-    draw('c1',{type:'bar',data:{labels:G.lab,datasets:[{data:G.val,lsColEtq:'#0E3B36',
-      backgroundColor:G.val.map(function(_,i){return i===mi1?'#0B815E':'#7FB3A2';}),borderRadius:6,maxBarThickness:70}]},
-      plugins:porAnio?[lsEtqAnual]:[],
-      options:{layout:porAnio?{padding:{top:22}}:{},
-        plugins:{legend:{display:false},lsEtqAnual:{display:porAnio,fmt:lsEtqAnual.soles},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
-        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
-        x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
   }
   const QC=clientesPeriodo(d1,d2,marca);
+  pintaTipoHome(d1,d2,marca);
   pintaAnioAnio(M,d1,d2,marca);
   pintaClientes(M,FECHAS,ingB,uniB,bol,QC);
   pintaQuienCompra(QC,d1,d2,marca);
@@ -2429,6 +2430,73 @@ async function exportarClientes(){
   }catch(e){toast('No se pudo generar el Excel: '+e.message,true);}
 }
 /* ==== detalle por prenda (solo período con registro completo) ==== */
+/* ===== Dónde está la plata: tipo de prenda (panel de inicio) =====
+   El tipo de prenda SÍ se registró en las boletas antiguas (a diferencia de la
+   talla, el color y la marca), así que este panel cubre todo el historial: las
+   boletas de 2025 hasta el 18/06/2026 salen de hist.cat y de ahí en adelante de
+   las ventas registradas prenda por prenda. Al filtrar por marca solo quedan
+   estas últimas, porque las boletas antiguas no guardan marca. */
+function nombreTipo(c){
+  const n=ncat(c);
+  return (!n||n==='NONE'||n==='-')?('Sin clasificar ('+c+')'):n;
+}
+/* Valor escrito al final de cada barra horizontal, como pide el estándar para
+   las comparaciones por categoría. Si no cabe, se escribe dentro de la barra. */
+const lsEtqBarraH={id:'lsEtqBarraH',afterDatasetsDraw:function(ch,a,o){
+  const ctx=ch.ctx,m=ch.getDatasetMeta(0);if(!m||!m.data)return;
+  ctx.save();ctx.font='700 11px Inter,system-ui,sans-serif';ctx.textBaseline='middle';
+  m.data.forEach(function(el,i){
+    const v=ch.data.datasets[0].data[i];if(!v&&v!==0)return;
+    const txt=(o&&o.fmt)?o.fmt(v):String(v),w=ctx.measureText(txt).width;
+    const der=ch.chartArea.right-el.x;
+    if(der>w+10){ctx.fillStyle=(o&&o.color)||'#4A5A55';ctx.textAlign='left';ctx.fillText(txt,el.x+6,el.y);}
+    else{ctx.fillStyle='#FFFFFF';ctx.textAlign='right';ctx.fillText(txt,el.x-6,el.y);}
+  });
+  ctx.restore();
+}};
+function pintaTipoHome(d1,d2,marca){
+  const o={};
+  if(!marca&&HIST&&HIST.cat)HIST.cat.forEach(function(r){
+    if(r[0]<d1||r[0]>d2)return;
+    if(!o[r[1]])o[r[1]]={i:0,u:0};
+    o[r[1]].i+=+r[3];o[r[1]].u+=+r[2];
+  });
+  VENTAS.forEach(function(v){
+    if(v.f<d1||v.f>d2)return;
+    if(marca&&v.ma!==marca)return;
+    if(!o[v.ca])o[v.ca]={i:0,u:0};
+    o[v.ca].i+=v.q*v.p;o[v.ca].u+=v.q;
+  });
+  const ord=Object.keys(o).map(function(k){return {k:k,i:o[k].i,u:o[k].u};})
+            .filter(function(x){return x.i>0;}).sort(function(a,b){return b.i-a.i;});
+  const ph=document.getElementById('phTipoH');
+  if(!ord.length){
+    if(CH['cTIPO']){CH['cTIPO'].destroy();delete CH['cTIPO'];}
+    if(ph)ph.textContent='Sin ventas en el tramo elegido.';
+    return;
+  }
+  const tot=ord.reduce(function(a,x){return a+x.i;},0);
+  const TOPE=8,top=ord.slice(0,TOPE),resto=ord.slice(TOPE);
+  const filas=top.map(function(x){return {n:nombreTipo(x.k),i:x.i,u:x.u};});
+  if(resto.length)filas.push({n:'Otros ('+resto.length+' tipos)',
+    i:resto.reduce(function(a,x){return a+x.i;},0),u:resto.reduce(function(a,x){return a+x.u;},0)});
+  if(ph)ph.innerHTML='Soles vendidos por tipo de prenda, '+textoPeriodo(d1,d2)+
+    ', sobre un total de '+S(tot)+'. Los '+top.length+' que más venden'+
+    (resto.length?' y el resto juntos en Otros':'')+'. El primero es <b>'+filas[0].n+'</b> con '+
+    (tot?(filas[0].i/tot*100).toFixed(1):'0')+'% del ingreso del tramo.'+
+    (marca?(' Solo '+nmar(marca)+', y por eso solo desde el 19/06/2026: las boletas anteriores no guardan marca.')
+          :(d1<CORTE?' Incluye las boletas anteriores al 19/06/2026: el tipo de prenda sí se registraba.':''));
+  draw('cTIPO',{type:'bar',data:{labels:filas.map(function(f){return f.n;}),
+    datasets:[{data:filas.map(function(f){return f.i;}),
+      backgroundColor:filas.map(function(_,i){return i?'#7FB3A2':'#0B815E';}),borderRadius:4,maxBarThickness:22}]},
+    plugins:[lsEtqBarraH],
+    options:{indexAxis:'y',layout:{padding:{right:52}},
+      plugins:{legend:{display:false},lsEtqBarraH:{fmt:function(v){return S(v);}},
+        tooltip:{callbacks:{label:function(c){const f=filas[c.dataIndex];
+          return S(f.i)+'  ·  '+N(f.u)+' prendas  ·  '+(tot?(f.i/tot*100).toFixed(1):'0')+'% del tramo';}}}},
+      scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;},maxTicksLimit:5}},
+        y:{ticks:{font:{size:11},autoSkip:false}}}}});
+}
 function pintaDetalle(d1,d2,fm){
   const V=VENTAS.filter(function(v){return v.f>=d1&&v.f<=d2&&(!fm||v.ma===fm);});
   /* Talla, color y marca solo existen en lo registrado prenda por prenda (19/06/2026
@@ -2438,12 +2506,11 @@ function pintaDetalle(d1,d2,fm){
              (fm?(' Solo '+nmar(fm)+'.'):'');
   [['phTalla','Unidades, no soles: sirve para saber qué talla reponer.'],
    ['phMarca','Marca o cliente de origen de la prenda.'],
-   ['phTipo','Ingreso por tipo de prenda.'],
    ['phRank','Ordenado por soles vendidos.'],
    ['phDet','Todas las combinaciones con al menos una venta.']].forEach(function(p){
     const e=document.getElementById(p[0]);if(e)e.innerHTML=p[1]+nota;});
   if(!V.length){
-    ['c2','c3','c4'].forEach(function(id){if(CH[id]){CH[id].destroy();delete CH[id];}});
+    ['c2','c3'].forEach(function(id){if(CH[id]){CH[id].destroy();delete CH[id];}});
     document.getElementById('rk').innerHTML='';
     document.getElementById('tdet').innerHTML='<tr><td colspan="5">Sin ventas registradas prenda por prenda en el tramo elegido.</td></tr>';
     return;
@@ -2463,11 +2530,6 @@ function pintaDetalle(d1,d2,fm){
   const ma=maOrd;altoBarras('c3',ma.length);
   draw('c3',{type:'bar',data:{labels:ma.map(function(m){return nmar(m[0]);}),datasets:[{data:ma.map(function(m){return m[1];}),
     backgroundColor:'#0F7A5A',borderRadius:4,barThickness:16}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
-  const porCa={};V.forEach(function(v){porCa[v.ca]=(porCa[v.ca]||0)+v.q*v.p;});
-  const ca=Object.keys(porCa).map(function(k){return [k,porCa[k]];}).sort(function(a,b){return b[1]-a[1];});altoBarras('c4',ca.length);
-  draw('c4',{type:'bar',data:{labels:ca.map(function(c){return ncat(c[0]);}),datasets:[{data:ca.map(function(c){return c[1];}),
-    backgroundColor:'#B45309',borderRadius:4,barThickness:16}]},
     options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
   const mx=ord.length?ord[0][1]:1;
   document.getElementById('rk').innerHTML=ord.map(function(o,i){
@@ -2507,9 +2569,9 @@ let filtroListo=false;
 /* Los años y los meses del filtro se rehacen cada vez que llegan datos nuevos:
    el histórico de boletas carga después que las ventas y agrega el año 2025. */
 function llenaPeriodos(){
-  /* Años con ventas y meses, para los atajos del filtro. La primera vez se abre
-     en el tramo con registro prenda por prenda (desde el 19/06/2026) y de ahí
-     se cambia libremente con el año, el mes o las fechas. */
+  /* Años con ventas y meses, para los atajos del filtro. Se abre con todo el
+     historial y la tendencia agrupada por año; de ahí se baja al año, al mes o
+     a las fechas que se quieran. */
   const fs=Object.keys(serieDiaria('')).sort();
   if(fs.length){
     ANIOS=Array.from(new Set(fs.map(function(x){return x.slice(0,4);}))).sort();
@@ -2521,7 +2583,6 @@ function llenaPeriodos(){
     eA.value=vA;eM.value=vM;
     const e1=document.getElementById('fd1'),e2=document.getElementById('fd2');
     e1.min=e2.min=fs[0];e1.max=e2.max=fs[fs.length-1];
-    if(!filtroListo){filtroListo=true;e1.value=(fs[0]<CORTE?CORTE:fs[0]);}
   }
 }
 function llenaFiltros(){
@@ -4231,6 +4292,23 @@ var TND={
     var G=agrupaM(M,F);
     res.push({titulo:'Ingresos en el tiempo (por '+G.nom+')',columnas:[{campo:'t',titulo:G.nom.charAt(0).toUpperCase()+G.nom.slice(1),tipo:'texto'},{campo:'v',titulo:'Ingresos',tipo:'moneda'}],
       filas:G.labTxt.map(function(t,i){return {t:t,v:G.val[i]};})});
+    /* Dónde está la plata: tipo de prenda, igual que el panel de inicio (todo el historial) */
+    var oT={};
+    if(!fm&&typeof HIST!=='undefined'&&HIST&&HIST.cat)HIST.cat.forEach(function(r){
+      if(r[0]<desde||r[0]>hasta)return;if(!oT[r[1]])oT[r[1]]={i:0,u:0};oT[r[1]].i+=+r[3];oT[r[1]].u+=+r[2];});
+    VENTAS.forEach(function(v){if(v.f<desde||v.f>hasta)return;if(fm&&v.ma!==fm)return;
+      if(!oT[v.ca])oT[v.ca]={i:0,u:0};oT[v.ca].i+=v.q*v.p;oT[v.ca].u+=v.q;});
+    var fT=Object.keys(oT).map(function(k){return {k:(typeof nombreTipo==='function'?nombreTipo(k):ncat(k)),u:oT[k].u,i:oT[k].i};})
+            .filter(function(x){return x.i>0;}).sort(function(a,b){return b.i-a.i;});
+    var totT=fT.reduce(function(a,x){return a+x.i;},0);
+    fT.forEach(function(x){x.p=totT?x.i/totT:null;});
+    if(fT.length){
+      fT.push({k:'Total',u:fT.reduce(function(a,x){return a+x.u;},0),i:totT,p:1,__total:true});
+      res.push({titulo:'Dónde está la plata — tipo de prenda',
+        nota:'Todos los tipos del período, de mayor a menor ingreso'+(fm?' (solo '+fmTxt+', y por eso solo desde el 19/06/2026)':(conHist?'. Incluye las boletas anteriores al 19/06/2026: el tipo de prenda sí se registraba':''))+'. En pantalla solo se dibujan los 8 primeros.',
+        columnas:[{campo:'k',titulo:'Tipo de prenda',tipo:'texto'},{campo:'u',titulo:'Prendas',tipo:'entero'},{campo:'i',titulo:'Ingresos',tipo:'moneda'},{campo:'p',titulo:'% del ingreso',tipo:'porcentaje'}],
+        filas:fT});
+    }
     /* Año contra año: cada año en la misma ventana de días del filtro, como en pantalla */
     var wA=(typeof ventanaAnual==='function')?ventanaAnual(desde,hasta):null;
     var mes={};Object.keys(M).forEach(function(f){if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
@@ -4254,7 +4332,6 @@ var TND={
       var tot=function(f){return f.concat([{k:'Total',u:uniV,i:ingV,pi:1,pu:1,__total:true}]);};
       var nm=' ('+fmTxt+')'+(conHist?' · solo desde el 19/06/2026':'');
       res.push({titulo:'Qué se vende — por marca'+nm,columnas:colQ('Marca'),filas:tot(agr('ma',nmar))});
-      res.push({titulo:'Qué se vende — por tipo de prenda'+nm,columnas:colQ('Tipo de prenda'),filas:tot(agr('ca',ncat))});
       res.push({titulo:'Qué se vende — por talla'+nm,nota:'Sirve para saber qué talla reponer (en pantalla se mira en prendas).',columnas:colQ('Talla'),filas:tot(agr('ta',function(k){return k;}).sort(function(a,b){return b.u-a.u;}))});
       var cb={};V.forEach(function(v){var k=llave(v);if(!cb[k])cb[k]={i:0,u:0,v:v};cb[k].i+=v.q*v.p;cb[k].u+=v.q;});
       res.push({titulo:'Detalle por prenda'+nm,nota:'Ordenado por soles vendidos en el período. Precio promedio = ingreso ÷ prendas.',
