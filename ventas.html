@@ -715,6 +715,9 @@ padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bott
 .tabpane{display:none;}.tabpane.active{display:block;}
 .cwrap{position:relative;width:100%;height:clamp(220px,26vh,320px);}
 .cwrap.tall{height:clamp(260px,34vh,400px);}
+/* Paneles de barras horizontales de "Qué se vende": mismo alto los dos, para que
+   ninguno quede con un hueco debajo (tope de 11 barras). */
+.cwrap.barrash{height:340px;}
 .cwrap canvas{position:absolute;inset:0;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
 th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--stone);
@@ -912,6 +915,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
  body.nav-open .side a{justify-content:flex-start;padding:11px 16px;}}
 @media(max-width:900px){.wrap{padding:14px 14px 36px;}.col12,.col8,.col6,.col4{grid-column:span 12;}
  .kpis{grid-template-columns:repeat(2,1fr);}.cwrap{height:300px;}.cwrap.tall{height:340px;}
+ .cwrap.barrash{height:340px;}
  .col12,.col8,.col7,.col6,.col5,.col4{grid-column:span 12;}}
 @media(max-width:600px){
  body{font-size:14.5px;}
@@ -1076,8 +1080,8 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         </div>
         <div class="tabpane">
           <div class="grid">
-            <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph" id="phMarca">Marca o cliente de origen de la prenda.</div><div class="cwrap"><canvas id="c3"></canvas></div></div>
-            <div class="panel col6"><div class="pt">Prendas vendidas por talla</div><div class="ph" id="phTalla">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap"><canvas id="c2"></canvas></div></div>
+            <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph" id="phMarca">Marca o cliente de origen de la prenda.</div><div class="cwrap barrash"><canvas id="c3"></canvas></div></div>
+            <div class="panel col6"><div class="pt">Prendas vendidas por talla</div><div class="ph" id="phTalla">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap barrash"><canvas id="c2"></canvas></div></div>
             <div class="panel col12"><div class="pt">Prendas por ingreso</div><div class="ph" id="phRank">Ordenado por soles vendidos en el período elegido.</div><div class="tblwrap" style="max-height:620px"><ul class="rank" id="rk"></ul></div></div>
           </div>
         </div>
@@ -1334,6 +1338,12 @@ const nest=c=>NEST[c]?NEST[c][1]:c;
 const ncol=c=>NCOL[c]?NCOL[c][1]:c;
 const S=v=>'S/ '+(v||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const N=v=>(v||0).toLocaleString('es-PE');
+/* Para los ejes: el valor exacto ya va escrito al final de cada barra. */
+const Sc=v=>'S/ '+Math.round(v||0).toLocaleString('es-PE');
+const Smil=function(v){v=+v||0;const a=Math.abs(v);
+  if(a>=1000000)return 'S/ '+(v/1000000).toLocaleString('es-PE',{maximumFractionDigits:1})+' M';
+  if(a>=1000)return 'S/ '+Math.round(v/1000).toLocaleString('es-PE')+' mil';
+  return 'S/ '+Math.round(v).toLocaleString('es-PE');};
 function descP(p){return ncat(p.ca)+' · '+nest(p.es)+' · '+ncol(p.co)+' · Talla '+p.ta+' · '+nmar(p.ma);}
 function llave(p){return p.ma+'|'+p.ca+'|'+p.es+'|'+p.co+'|'+p.ta;}
 function hoyISO(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
@@ -2073,14 +2083,14 @@ function pintaDash(){
       plugins:[lsEtqAnual],
       options:{layout:{padding:{top:22}},
         plugins:{legend:{display:false},lsEtqAnual:{display:true,fmt:lsEtqAnual.soles},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
-        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:Smil}},
         x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
   }else{
     draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
       pointRadius:G.val.length>40?0:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:true,
       backgroundColor:function(c){const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(15,122,90,.18)');g.addColorStop(1,'rgba(15,122,90,0)');return g;}}]},
       options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
-        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:Smil}},
         x:{ticks:{maxTicksLimit:12,maxRotation:0,minRotation:0}}}}});
   }
   const QC=clientesPeriodo(d1,d2,marca);
@@ -2430,6 +2440,36 @@ async function exportarClientes(){
   }catch(e){toast('No se pudo generar el Excel: '+e.message,true);}
 }
 /* ==== detalle por prenda (solo período con registro completo) ==== */
+/* Los 10 primeros y el resto sumado en "Otros", para que la tarjeta no crezca
+   sin control cuando hay muchas categorías con casi nada. */
+function cortaTop(ord,palabra,tope){
+  tope=tope||10;
+  if(ord.length<=tope+1)return ord;
+  const resto=ord.slice(tope);
+  return ord.slice(0,tope).concat([['Otros ('+resto.length+' '+palabra+')',
+    resto.reduce(function(a,x){return a+x[1];},0)]]);
+}
+/* Barras horizontales con el valor escrito, como pide el estándar para las
+   comparaciones por categoría. Las usan marca y talla, con el mismo alto. */
+function barrasH(id,filas,color,fmt,suf,fmtEje){
+  if(!filas.length){if(CH[id]){CH[id].destroy();delete CH[id];}return;}
+  draw(id,{type:'bar',data:{labels:filas.map(function(f){return f[0];}),
+    datasets:[{data:filas.map(function(f){return f[1];}),
+      backgroundColor:filas.map(function(f,i){return i?color:sombra(color);}),
+      borderRadius:4,maxBarThickness:20}]},
+    plugins:[lsEtqBarraH],
+    options:{indexAxis:'y',layout:{padding:{right:54}},
+      plugins:{legend:{display:false},lsEtqBarraH:{fmt:fmt},
+        tooltip:{callbacks:{label:function(c){return fmt(c.parsed.x)+(suf||'');}}}},
+      scales:{x:{beginAtZero:true,ticks:{callback:fmtEje||fmt,maxTicksLimit:4,maxRotation:0,minRotation:0}},
+        y:{ticks:{font:{size:11},autoSkip:false}}}}});
+}
+/* El primero, un poco más oscuro, para que se vea cuál manda. */
+function sombra(c){
+  const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
+  const m=function(x){return Math.round(x*0.78);};
+  return '#'+[m(r),m(g),m(b)].map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+}
 /* ===== Dónde está la plata: tipo de prenda (panel de inicio) =====
    El tipo de prenda SÍ se registró en las boletas antiguas (a diferencia de la
    talla, el color y la marca), así que este panel cubre todo el historial: las
@@ -2476,14 +2516,13 @@ function pintaTipoHome(d1,d2,marca){
     return;
   }
   const tot=ord.reduce(function(a,x){return a+x.i;},0);
-  const TOPE=8,top=ord.slice(0,TOPE),resto=ord.slice(TOPE);
+  const TOPE=10,top=ord.slice(0,TOPE),resto=ord.slice(TOPE);
   const filas=top.map(function(x){return {n:nombreTipo(x.k),i:x.i,u:x.u};});
   if(resto.length)filas.push({n:'Otros ('+resto.length+' tipos)',
     i:resto.reduce(function(a,x){return a+x.i;},0),u:resto.reduce(function(a,x){return a+x.u;},0)});
   if(ph)ph.innerHTML='Soles vendidos por tipo de prenda, '+textoPeriodo(d1,d2)+
     ', sobre un total de '+S(tot)+'. Los '+top.length+' que más venden'+
-    (resto.length?' y el resto juntos en Otros':'')+'. El primero es <b>'+filas[0].n+'</b> con '+
-    (tot?(filas[0].i/tot*100).toFixed(1):'0')+'% del ingreso del tramo.'+
+    (resto.length?' y el resto juntos en Otros':'')+'.'+
     (marca?(' Solo '+nmar(marca)+', y por eso solo desde el 19/06/2026: las boletas anteriores no guardan marca.')
           :(d1<CORTE?' Incluye las boletas anteriores al 19/06/2026: el tipo de prenda sí se registraba.':''));
   draw('cTIPO',{type:'bar',data:{labels:filas.map(function(f){return f.n;}),
@@ -2494,7 +2533,7 @@ function pintaTipoHome(d1,d2,marca){
       plugins:{legend:{display:false},lsEtqBarraH:{fmt:function(v){return S(v);}},
         tooltip:{callbacks:{label:function(c){const f=filas[c.dataIndex];
           return S(f.i)+'  ·  '+N(f.u)+' prendas  ·  '+(tot?(f.i/tot*100).toFixed(1):'0')+'% del tramo';}}}},
-      scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;},maxTicksLimit:5}},
+      scales:{x:{beginAtZero:true,ticks:{callback:Smil,maxTicksLimit:4,maxRotation:0,minRotation:0}},
         y:{ticks:{font:{size:11},autoSkip:false}}}}});
 }
 function pintaDetalle(d1,d2,fm){
@@ -2504,8 +2543,8 @@ function pintaDetalle(d1,d2,fm){
   const txt=textoPeriodo(V.length?V[0].f:d1,V.length?V[V.length-1].f:d2);
   const nota=(d1<CORTE?' Solo las ventas registradas prenda por prenda, '+txt+': las boletas anteriores no guardan talla, color ni marca.':' Ventas '+txt+'.')+
              (fm?(' Solo '+nmar(fm)+'.'):'');
-  [['phTalla','Unidades, no soles: sirve para saber qué talla reponer.'],
-   ['phMarca','Marca o cliente de origen de la prenda.'],
+  [['phTalla','Unidades, no soles: sirve para saber qué talla reponer. De la que más sale a la que menos.'],
+   ['phMarca','Marca o cliente de origen de la prenda. Las 10 que más venden; el resto, junto en Otros (en el Excel salen todas).'],
    ['phRank','Ordenado por soles vendidos.'],
    ['phDet','Todas las combinaciones con al menos una venta.']].forEach(function(p){
     const e=document.getElementById(p[0]);if(e)e.innerHTML=p[1]+nota;});
@@ -2519,18 +2558,17 @@ function pintaDetalle(d1,d2,fm){
   const combos={};V.forEach(function(v){const k=llave(v);if(!combos[k])combos[k]={i:0,u:0,v:v};combos[k].i+=v.q*v.p;combos[k].u+=v.q;});
   const ord=Object.keys(combos).map(function(k){return [k,combos[k].i];}).sort(function(a,b){return b[1]-a[1];});
   let acc=0,n80=0;for(let i=0;i<ord.length;i++){acc+=ord[i][1];n80++;if(acc>=ing*0.8)break;}
+  /* Marca y talla: los 10 primeros y el resto junto en "Otros". Antes salían las 30
+     marcas, veinte de ellas en cero, y la tarjeta se estiraba más de 800 px mientras
+     la de al lado quedaba corta. */
   const porMa={};V.forEach(function(v){porMa[v.ma]=(porMa[v.ma]||0)+v.q*v.p;});
-  const maOrd=Object.keys(porMa).map(function(k){return [k,porMa[k]];}).sort(function(a,b){return b[1]-a[1];});
+  const maOrd=Object.keys(porMa).map(function(k){return [nmar(k),porMa[k]];})
+    .filter(function(x){return x[1]>0;}).sort(function(a,b){return b[1]-a[1];});
   const porTa={};V.forEach(function(v){porTa[v.ta]=(porTa[v.ta]||0)+v.q;});
-  const taOrd=Object.keys(porTa).map(function(k){return [k,porTa[k]];}).sort(function(a,b){return b[1]-a[1];});
-  const tal=taOrd;
-  draw('c2',{type:'doughnut',data:{labels:tal.map(function(t){return 'Talla '+t[0];}),datasets:[{data:tal.map(function(t){return t[1];}),
-    backgroundColor:tal.map(function(_,i){return colorN(i);}),borderWidth:0}]},
-    options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:12}}}}});
-  const ma=maOrd;altoBarras('c3',ma.length);
-  draw('c3',{type:'bar',data:{labels:ma.map(function(m){return nmar(m[0]);}),datasets:[{data:ma.map(function(m){return m[1];}),
-    backgroundColor:'#0F7A5A',borderRadius:4,barThickness:16}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
+  const taOrd=Object.keys(porTa).map(function(k){return ['Talla '+k,porTa[k]];})
+    .filter(function(x){return x[1]>0;}).sort(function(a,b){return b[1]-a[1];});
+  barrasH('c2',cortaTop(taOrd,'tallas',12),'#B45309',function(v){return N(v);},' prendas');
+  barrasH('c3',cortaTop(maOrd,'marcas',10),'#0F7A5A',function(v){return S(v);},'',Smil);
   const mx=ord.length?ord[0][1]:1;
   document.getElementById('rk').innerHTML=ord.map(function(o,i){
     const c=combos[o[0]];
