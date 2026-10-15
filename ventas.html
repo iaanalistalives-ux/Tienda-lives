@@ -668,6 +668,7 @@ box-shadow:var(--sh);padding:12px 16px;margin-bottom:14px;font-size:13.5px;color
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border-radius:var(--r);
 box-shadow:var(--sh);padding:10px 14px;margin-bottom:14px;position:sticky;top:0;z-index:15;}
 .seg{display:inline-flex;background:var(--warm-light);border-radius:8px;padding:3px;gap:2px;}
+.flb{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--stone);}
 .seg button{background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;
 color:var(--stone);padding:6px 14px;border-radius:6px;cursor:pointer;}
 .seg button:hover{color:var(--sage);}
@@ -996,12 +997,15 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
       <!-- ============ DASHBOARD ============ -->
       <section id="v-dash">
         <div class="bar no-print">
-          <div class="seg" id="segper">
-            <button onclick="setPer('7',this)">7 días</button>
-            <button onclick="setPer('30',this)">30 días</button>
-            <button class="active" onclick="setPer('tienda',this)">Desde el 19 jun</button>
-            <button onclick="setPer('todo',this)">Todo (desde 2025)</button>
-          </div>
+          <span class="flb">Año</span>
+          <select id="fAnio" onchange="filtroAnioMes()"></select>
+          <span class="flb">Mes</span>
+          <select id="fMes" onchange="filtroAnioMes()"></select>
+          <span class="flb">Del</span>
+          <input id="fd1" type="date" onchange="filtroFechas()">
+          <span class="flb">al</span>
+          <input id="fd2" type="date" onchange="filtroFechas()">
+          <button class="btn ghost" onclick="filtroTodo()">Todo el historial</button>
           <select id="fmarcaD" onchange="pintaDash()"></select>
           <span class="spacer"></span>
           <button class="btn" onclick="window.print()">Imprimir / PDF</button>
@@ -1023,7 +1027,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph" id="mejorPer">Suma de precio × cantidad de cada línea vendida.</div>
               <div class="seg no-print" id="seggran" style="margin-bottom:10px"></div>
               <div class="cwrap tall"><canvas id="c1"></canvas></div></div>
-            <div class="panel col4"><div class="pt">Prendas vendidas por talla</div><div class="ph">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap tall"><canvas id="c2"></canvas></div></div>
+            <div class="panel col4"><div class="pt">Prendas vendidas por talla</div><div class="ph" id="phTalla">Unidades, no soles: sirve para saber qué talla reponer.</div><div class="cwrap tall"><canvas id="c2"></canvas></div></div>
           </div>
         </div>
         <div class="tabpane">
@@ -1033,10 +1037,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph" id="aacph">Una línea por año, mes a mes.</div>
               <div class="cwrap tall"><canvas id="cAA"></canvas></div></div>
             <div class="panel col12"><div class="pt">Resumen del mismo período en cada año</div>
-              <div class="ph">Compara enero–junio de un año contra enero–junio del otro, para que la comparación sea justa.</div>
+              <div class="ph" id="phAAt">Compara el mismo tramo de meses en cada año, para que la comparación sea justa.</div>
               <div class="tblwrap"><table><thead><tr><th>Período</th><th class="num">Prendas</th><th class="num">Ingreso</th><th class="num">Precio prom.</th><th class="num">Variación</th></tr></thead><tbody id="tAA"></tbody></table></div></div>
             <div class="panel col12"><div class="pt">Estacionalidad: qué meses venden más</div>
-              <div class="ph">Promedio de ingreso por mes juntando todos los años disponibles. Sirve para saber cuándo abastecer la tienda.</div>
+              <div class="ph" id="phEst">Promedio de ingreso por mes juntando todos los años disponibles. Sirve para saber cuándo abastecer la tienda.</div>
               <div class="cwrap"><canvas id="cEST"></canvas></div></div>
           </div>
         </div>
@@ -1045,7 +1049,7 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <div class="insight" id="insCli"></div>
           <div class="grid">
             <div class="panel col6"><div class="pt">Ticket promedio por mes</div>
-              <div class="ph">Cuánto gasta un cliente en cada visita: ingreso del mes ÷ boletas del mes.</div>
+              <div class="ph" id="phTic">Cuánto gasta un cliente en cada visita: ingreso del mes ÷ boletas del mes.</div>
               <div class="cwrap"><canvas id="cTIC"></canvas></div></div>
             <div class="panel col6"><div class="pt">Prendas por boleta, por mes</div>
               <div class="ph">Cuántas prendas se lleva un cliente por visita. Subir este número suele costar menos que traer clientes nuevos.</div>
@@ -1056,10 +1060,10 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
           <div class="insight" id="insQC"></div>
           <div class="grid">
             <div class="panel col5"><div class="pt">Quién compra</div>
-              <div class="ph">Cada persona según el tipo de cliente de su boleta: público, obrero o empleado.</div>
+              <div class="ph" id="phQC">Cada persona según el tipo de cliente de su boleta: público, obrero o empleado.</div>
               <div class="tblwrap"><table><thead><tr><th>Tipo</th><th class="num">Personas</th><th class="num">Boletas</th><th class="num">Ingreso</th><th class="num">%</th></tr></thead><tbody id="tQC"></tbody></table></div></div>
             <div class="panel col7"><div class="pt">Cuántas veces vuelve cada cliente</div>
-              <div class="ph">Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.</div>
+              <div class="ph" id="phFREQ">Personas según cuántas boletas hicieron.</div>
               <div class="cwrap"><canvas id="cFREQ"></canvas></div></div>
             <div class="panel col12" id="pTop"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div class="pt">Todos los clientes, de los que más veces compraron a los que menos</div><button class="btn no-print" onclick="exportarClientes()">Descargar Excel</button></div>
               <div class="ph" id="phTop">Ordenado por número de boletas. <b>Planilla</b> = qué parte de sus compras se pagó por descuento de planilla y no en efectivo. Período: enero 2025 a junio 2026.</div>
@@ -1072,13 +1076,13 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
         </div>
         <div class="tabpane">
           <div class="grid">
-            <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph">Marca o cliente de origen de la prenda.</div><div class="cwrap"><canvas id="c3"></canvas></div></div>
-            <div class="panel col6"><div class="pt">Ingresos por tipo de prenda</div><div class="ph">Los códigos marcados como antiguos vienen del Excel anterior y ya no se usan al vender.</div><div class="cwrap"><canvas id="c4"></canvas></div></div>
-            <div class="panel col12"><div class="pt">Prendas por ingreso</div><div class="ph">Ordenado por soles vendidos en el período elegido.</div><div class="tblwrap" style="max-height:620px"><ul class="rank" id="rk"></ul></div></div>
+            <div class="panel col6"><div class="pt">Ingresos por marca</div><div class="ph" id="phMarca">Marca o cliente de origen de la prenda.</div><div class="cwrap"><canvas id="c3"></canvas></div></div>
+            <div class="panel col6"><div class="pt">Ingresos por tipo de prenda</div><div class="ph" id="phTipo">Los códigos marcados como antiguos vienen del Excel anterior y ya no se usan al vender.</div><div class="cwrap"><canvas id="c4"></canvas></div></div>
+            <div class="panel col12"><div class="pt">Prendas por ingreso</div><div class="ph" id="phRank">Ordenado por soles vendidos en el período elegido.</div><div class="tblwrap" style="max-height:620px"><ul class="rank" id="rk"></ul></div></div>
           </div>
         </div>
         <div class="tabpane">
-          <div class="panel"><div class="pt">Detalle por combinación</div><div class="ph">Todas las combinaciones con al menos una venta en el período.</div>
+          <div class="panel"><div class="pt">Detalle por combinación</div><div class="ph" id="phDet">Todas las combinaciones con al menos una venta en el período.</div>
           <div class="tblwrap"><table><thead><tr><th>SKU</th><th>Prenda</th><th class="num">Unid.</th><th class="num">Ingreso</th><th class="num">Precio prom.</th></tr></thead><tbody id="tdet"></tbody></table></div></div>
         </div>
         <details class="help"><summary>¿Cómo leo este tablero?</summary>
@@ -1936,12 +1940,39 @@ if(window.matchMedia('(max-width:600px)').matches){Chart.defaults.font.size=11;C
 const ROT=['#B45309','#4E6B78','#10B981','#DC2626','#F59E0B'];let CH={};
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
 function ddmm(f){return f.slice(8)+'/'+f.slice(5,7);}
-function setPer(p,el){
-  per=p;
-  document.querySelectorAll('#segper button').forEach(function(b){b.classList.remove('active');});
-  el.classList.add('active');
+/* ===== Filtro de período: año, mes o rango de fechas =====
+   Manda siempre el rango Del–al. Año y Mes son atajos que lo llenan, así que
+   siempre se ve en pantalla qué tramo se está mirando. Todo el tablero (KPIs,
+   gráficos, tablas y el Excel) sale de ese rango y de la marca elegida. */
+let ANIOS=[];
+const PLANILLA='Descuento por planilla';
+function finMes(a,m){const d=new Date(Date.UTC(+a,+m,0));return d.toISOString().slice(0,10);}
+function rangoSel(){
+  const a=document.getElementById('fd1').value||'',b=document.getElementById('fd2').value||'';
+  return (a&&b&&b<a)?{d1:b,d2:a}:{d1:a,d2:b};
+}
+function filtroAnioMes(){
+  const eA=document.getElementById('fAnio'),eM=document.getElementById('fMes');
+  let a=eA.value,m=eM.value;
+  /* Mes sin año: se entiende el mes del último año con ventas. */
+  if(m&&!a){a=ANIOS[ANIOS.length-1]||'';eA.value=a;}
+  const e1=document.getElementById('fd1'),e2=document.getElementById('fd2');
+  if(!a){e1.value='';e2.value='';}
+  else if(!m){e1.value=a+'-01-01';e2.value=a+'-12-31';}
+  else{e1.value=a+'-'+m+'-01';e2.value=finMes(a,m);}
   pintaDash();
 }
+function filtroFechas(){
+  /* Al escribir fechas a mano, los atajos de año y mes dejan de mandar. */
+  document.getElementById('fAnio').value='';document.getElementById('fMes').value='';
+  pintaDash();
+}
+function filtroTodo(){
+  ['fAnio','fMes','fd1','fd2'].forEach(function(i){document.getElementById(i).value='';});
+  pintaDash();
+}
+function ddmmaa(f){return f?f.slice(8,10)+'/'+f.slice(5,7)+'/'+f.slice(0,4):'';}
+function textoPeriodo(d1,d2){return 'del '+ddmmaa(d1)+' al '+ddmmaa(d2);}
 function setGran(g,el){gran=g;pintaDash();}
 /* Con 20 meses de datos, un gráfico por día son 600 barras ilegibles.
    Se ofrecen solo las agrupaciones que se leen bien en el período elegido. */
@@ -1962,37 +1993,52 @@ function pintaBotonesGran(n){
     return '<button'+(g===gran?' class="active"':'')+' onclick="setGran(\''+g+'\',this)">'+nom[g]+'</button>';}).join('');
 }
 const CORTE='2026-06-19';   /* desde aquí existe el registro prenda por prenda */
-/* Serie diaria unificada: histórico de boletas + ventas del sistema. */
-function serieDiaria(){
+/* Serie diaria unificada: histórico de boletas + ventas del sistema.
+   Al filtrar por marca quedan fuera las boletas anteriores al 19/06/2026: solo
+   guardan el total del día, no qué marca se vendió. */
+function serieDiaria(marca){
   const m={};
-  if(HIST&&HIST.dia)HIST.dia.forEach(function(d){
+  if(!marca&&HIST&&HIST.dia)HIST.dia.forEach(function(d){
     m[d[0]]={b:d[1],u:d[2],i:d[3]};
   });
   const tk={};
   VENTAS.forEach(function(v){
+    if(marca&&v.ma!==marca)return;
     if(!m[v.f])m[v.f]={b:0,u:0,i:0};
     m[v.f].u+=v.q;m[v.f].i+=v.q*v.p;
     if(v.tk){const k=v.f+'|'+v.tk;if(!tk[k]){tk[k]=1;m[v.f].b++;}}
   });
   return m;
 }
+function limpiaTablero(){
+  ['c1','c2','c3','c4','cAA','cEST','cTIC','cPPB','cFREQ','sp1'].forEach(function(id){
+    if(CH[id]){CH[id].destroy();delete CH[id];}});
+  ['tAA','tQC','tTOP','tdet','kcli'].forEach(function(id){
+    const e=document.getElementById(id);if(e)e.innerHTML='';});
+  const rk=document.getElementById('rk');if(rk)rk.innerHTML='';
+  QC_VISTA={filas:[],sub:''};
+}
 function pintaDash(){
   if(!window.Chart){cargaChart().then(function(ok){if(ok)pintaDash();});return;}
-  const M=serieDiaria(),fechas=Object.keys(M).sort();
-  if(!fechas.length)return;
-  const hoy=hoyISO();
-  let desdeF;
-  if(per==='todo')desdeF=fechas[0];
-  else if(per==='tienda')desdeF=CORTE;
-  else{const d=new Date();d.setDate(d.getDate()-parseInt(per));
-       desdeF=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
-  const conHist=desdeF<CORTE;
-  FECHAS=fechas.filter(function(f){return f>=desdeF;});
+  llenaPeriodos();
+  const marca=document.getElementById('fmarcaD').value;
+  const M=serieDiaria(marca),fechas=Object.keys(M).sort();
+  const r=rangoSel();
+  const d1=r.d1||(fechas[0]||''),d2=r.d2||(fechas[fechas.length-1]||'');
+  FECHAS=fechas.filter(function(f){return f>=d1&&f<=d2;});
+  if(!FECHAS.length){
+    document.getElementById('kdash').innerHTML=
+      '<div class="kpi"><div class="l">Sin ventas en el tramo elegido</div>'+
+      '<div class="row"><span class="v">—</span></div>'+
+      '<div class="s">Cambia el año, el mes o las fechas en la barra de arriba.</div></div>';
+    limpiaTablero();
+    return;
+  }
   /* KPIs sobre la serie unificada */
   let ing=0,uni=0,bol=0,dias=0,ingB=0,uniB=0;
   FECHAS.forEach(function(f){const d=M[f];ing+=d.i;uni+=d.u;bol+=d.b;if(d.i>0)dias++;
     if(d.b>0){ingB+=d.i;uniB+=d.u;}});
-  /* período anterior del mismo largo */
+  /* período anterior del mismo largo, justo antes del elegido */
   const iDesde=fechas.indexOf(FECHAS[0]),largo=FECHAS.length;
   const prevF=fechas.slice(Math.max(0,iDesde-largo),iDesde);
   let ingPrev=0;prevF.forEach(function(f){ingPrev+=M[f].i;});
@@ -2004,33 +2050,18 @@ function pintaDash(){
     return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v"'+d+'>'+v+'</span></div><div class="s">'+s+'</div></div>';}
   document.getElementById('kdash').innerHTML=
     '<div class="kpi money"><div class="l">Ingresos del período</div><div class="row"><span class="v" data-count="'+ing+'" data-dec="2" data-pre="S/ ">'+S(ing)+'</span>'+dh+'</div>'+
-    '<div class="s">'+(ingPrev>0?'vs '+S(ingPrev)+' del período anterior':'sin período anterior comparable')+'</div><div class="spark"><canvas id="sp1"></canvas></div></div>'+
+    '<div class="s">'+(ingPrev>0?'vs '+S(ingPrev)+' del tramo anterior, del mismo largo':'sin tramo anterior comparable')+'</div><div class="spark"><canvas id="sp1"></canvas></div></div>'+
     kpi('Prendas vendidas',N(uni),'','en '+dias+' días con venta',uni,0)+
     kpi('Precio promedio',S(uni?ing/uni:0),'','ingreso ÷ prendas (ponderado)',uni?ing/uni:0,2,'S/ ')+
     (bol?kpi('Ticket promedio',S(ingB/bol),'',N(bol)+' boletas · '+(uniB/bol).toFixed(2)+' prendas por boleta',ingB/bol,2,'S/ '):'')+
     kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta',dias?ing/dias:0,2,'S/ ');
-  /* aviso cuando el período mezcla las dos fuentes */
-  const av=document.getElementById('avisoHist');
-  if(conHist){
-    av.style.display='';
-    av.innerHTML='<b>Este período incluye las boletas anteriores al 19 de junio de 2026.</b> Esas ventas registran '+
-      'tipo de prenda, cantidad y precio, pero <b>no color, talla ni marca</b>, porque en ese entonces no se registraban. '+
-      'Por eso las pestañas de talla, color y marca quedan ocultas: mezclarlas daría un gráfico falso. '+
-      'Para verlas, elija <b>Desde el 19 jun</b>.';
-  }else av.style.display='none';
-  document.querySelectorAll('#v-dash .tabs button').forEach(function(b,k){
-    if(k===4||k===5)b.style.display=conHist?'none':'';
-  });
-  if(conHist){
-    const act=document.querySelector('#v-dash .tabs button.active');
-    if(act&&act.style.display==='none')tab(0,document.querySelectorAll('#v-dash .tabs button')[0]);
-  }
   /* ==== gráfico principal ==== */
   pintaBotonesGran(FECHAS.length);
   const G=agrupaM(M,FECHAS);
   let mx1=-1,mi1=0;G.val.forEach(function(v,i){if(v>mx1){mx1=v;mi1=i;}});
   document.getElementById('mejorPer').innerHTML=G.val.length?
-    ('Suma de precio × cantidad, agrupada por '+G.nom+'. El mejor '+G.nom+' fue <b>'+G.labTxt[mi1]+'</b> con '+S(mx1)+
+    ('Suma de precio × cantidad, '+textoPeriodo(FECHAS[0],FECHAS[FECHAS.length-1])+', agrupada por '+G.nom+
+     '. El mejor '+G.nom+' fue <b>'+G.labTxt[mi1]+'</b> con '+S(mx1)+
      (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
   animaKpis('kdash');
   drawSpark('sp1',serie);
@@ -2052,11 +2083,11 @@ function pintaDash(){
         scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}},
         x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
   }
-  pintaAnioAnio(M);
-  pintaClientes(M,ingB,uniB,bol);
-  pintaQuienCompra();
-  if(!conHist)pintaDetalle(desdeF);
-  else document.getElementById('insight').innerHTML=insightHist(M,ing,uni,bol,dias);
+  const QC=clientesPeriodo(d1,d2,marca);
+  pintaAnioAnio(M,d1,d2,marca);
+  pintaClientes(M,FECHAS,ingB,uniB,bol,QC);
+  pintaQuienCompra(QC,d1,d2,marca);
+  pintaDetalle(d1,d2,marca);
 }
 /* Dos juegos de etiquetas: las del gráfico (cortas, en dos líneas cuando hace
    falta) y las de texto completas para la frase de arriba y el tooltip.
@@ -2099,20 +2130,34 @@ function insightHist(M,ing,uni,bol,dias){
     '. El precio promedio por prenda fue '+S(ing/uni)+'. <b>No se puede calcular utilidad</b> porque no hay costo cargado.';
 }
 /* ==== año contra año + estacionalidad ==== */
-function pintaAnioAnio(M){
+/* Ventana de días que se repite en cada año. Con un filtro de 12 meses o más, o
+   con un tramo que cruza de un año al siguiente, se comparan los años enteros. */
+function ventanaAnual(d1,d2){
+  if(!d1||!d2)return null;
+  if((new Date(d2+'T00:00:00Z')-new Date(d1+'T00:00:00Z'))/86400000>=364)return null;
+  if(d1.slice(5)>d2.slice(5))return null;
+  return {a:d1.slice(5),b:d2.slice(5)};
+}
+function pintaAnioAnio(M,d1,d2,marca){
+  /* Cada año se mide en la MISMA ventana de días que el filtro (por ejemplo del
+     19/06 al 15/10 de cada año): comparar un año entero contra medio año no diría nada. */
+  const w=ventanaAnual(d1,d2);
+  const m1=w?parseInt(w.a.slice(0,2),10):1,m2=w?parseInt(w.b.slice(0,2),10):12;
   const mes={};
   Object.keys(M).forEach(function(f){
+    if(w&&(f.slice(5)<w.a||f.slice(5)>w.b))return;
     const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
     mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
   });
   const anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
-  const labels=MES.map(function(m){return m.slice(0,3);});
+  const meses=[];for(let k=m1;k<=m2;k++)meses.push(('0'+k).slice(-2));
+  const labels=meses.map(function(k){return MES[parseInt(k,10)-1].slice(0,3);});
   /* Comparativo anual en líneas (12/10/2026): una línea por año, eje enero–diciembre,
      etiqueta en soles en cada punto de cada año. Mes sin ventas = hueco, no cero. */
   const COLA=lsEtqAnual.colores(anios);
   const ds=anios.map(function(a,i){
-    return lsEtqAnual.serie(a,labels.map(function(_,k){
-      const key=a+'-'+('0'+(k+1)).slice(-2);return mes[key]?mes[key].i:null;}),i===anios.length-1,COLA[a]);
+    return lsEtqAnual.serie(a,meses.map(function(kk){
+      const key=a+'-'+kk;return mes[key]?mes[key].i:null;}),i===anios.length-1,COLA[a]);
   });
   draw('cAA',{type:'line',data:{labels:labels,datasets:ds},
     options:{layout:{padding:{top:24,right:10,left:4}},interaction:{mode:'index',intersect:false},
@@ -2121,11 +2166,7 @@ function pintaAnioAnio(M){
       scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}},
     plugins:[lsEtqAnual]});
   /* tabla: mismo tramo de meses en cada año */
-  const comunes=[];
-  for(let k=1;k<=12;k++){
-    const kk=('0'+k).slice(-2);
-    if(anios.every(function(a){return mes[a+'-'+kk];}))comunes.push(kk);
-  }
+  const comunes=meses.filter(function(kk){return anios.every(function(a){return mes[a+'-'+kk];});});
   let filas='',prev=null;
   const tramo=comunes.length?(MES[parseInt(comunes[0])-1]+'–'+MES[parseInt(comunes[comunes.length-1])-1]):'';
   anios.forEach(function(a){
@@ -2138,24 +2179,18 @@ function pintaAnioAnio(M){
     prev=i;
   });
   document.getElementById('tAA').innerHTML=filas||'<tr><td colspan="5">Todavía no hay dos años para comparar.</td></tr>';
-  /* Metodología del comparativo y aviso de año en curso incompleto. */
-  const na=document.getElementById('notaAnios');
-  if(na){
-    const hoy=new Date(),aAct=String(hoy.getFullYear());
-    const ultimo=Object.keys(mes).sort().pop()||'';
-    const parcial=(ultimo.slice(0,4)===aAct);
-    na.innerHTML='<b>Cómo se compara:</b> los años se superponen por mes calendario, de modo que '+
-      'enero se mide contra enero y no contra un tramo distinto. '+
-      (parcial?('<b>El año '+aAct+' está en curso</b> y su último mes ('+
-        MES[parseInt(ultimo.slice(5,7))-1]+') puede estar incompleto: leerlo como caída sería un error.'):
-        'Todos los años mostrados están completos.');
-  }
-  document.getElementById('aacph').innerHTML=comunes.length?
-    ('Una línea por año, mes a mes. La tabla de abajo compara solo <b>'+tramo+'</b>, que son los meses que existen en todos los años; comparar un año completo contra medio año no diría nada.'):
-    'Una línea por año, mes a mes.';
+  const vent=w?('Cada año medido en el mismo tramo del filtro, <b>'+w.a.slice(3)+'/'+w.a.slice(0,2)+' al '+w.b.slice(3)+'/'+w.b.slice(0,2)+'</b>.')
+             :'Cada año completo, de enero a diciembre.';
+  const sMar=marca?(' Solo '+nmar(marca)+', así que no entran las boletas anteriores al 19/06/2026.'):'';
+  document.getElementById('aacph').innerHTML='Una línea por año, mes a mes. '+vent+sMar;
+  const pt=document.getElementById('phAAt');
+  if(pt)pt.innerHTML=comunes.length?('Compara solo <b>'+tramo+'</b>, que son los meses con ventas en todos los años; comparar un año completo contra medio año no diría nada.')
+                                   :'Hace falta más de un año con ventas en el tramo elegido.';
+  const pe=document.getElementById('phEst');
+  if(pe)pe.innerHTML='Promedio de ingreso por mes juntando los años disponibles'+(w?', dentro del tramo del filtro':'')+'. Sirve para saber cuándo abastecer la tienda.';
   /* estacionalidad: promedio por mes calendario */
-  const prom=labels.map(function(_,k){
-    const kk=('0'+(k+1)).slice(-2),vs=[];
+  const prom=meses.map(function(kk){
+    const vs=[];
     anios.forEach(function(a){if(mes[a+'-'+kk])vs.push(mes[a+'-'+kk].i);});
     return vs.length?vs.reduce(function(x,y){return x+y;},0)/vs.length:null;});
   let mmax=-1,imax=0;prom.forEach(function(v,i){if(v!==null&&v>mmax){mmax=v;imax=i;}});
@@ -2164,13 +2199,13 @@ function pintaAnioAnio(M){
     options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'S/ '+v;}}}}}});
 }
 /* ==== clientes y tickets ==== */
-function pintaClientes(M,ing,uni,bol){
+function pintaClientes(M,fs,ing,uni,bol,QC){
   /* Solo se promedian los días que tienen boletas contadas. Si un mes mezcla
      días con boleta y días sin ella, se usa únicamente la parte con boleta:
      dividir todo el ingreso entre media docena de boletas daría un ticket falso. */
   const mes={};
-  Object.keys(M).forEach(function(f){
-    if(!M[f].b)return;
+  fs.forEach(function(f){
+    if(!M[f]||!M[f].b)return;
     const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
     mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
   });
@@ -2182,20 +2217,16 @@ function pintaClientes(M,ing,uni,bol){
   draw('cPPB',{type:'line',data:{labels:lab,datasets:[{data:ks.map(function(k){return mes[k].u/mes[k].b;}),
     borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:false}]},
     options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}});
-  const c=HIST&&HIST.cli;
   function kpi(l,v,cls,s){return '<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="row"><span class="v">'+v+'</span></div><div class="s">'+s+'</div></div>';}
+  /* Los clientes distintos solo se pueden contar donde hay documento por venta
+     (desde el 19/06/2026): si el tramo no tiene ninguno, esos dos KPI no salen. */
   document.getElementById('kcli').innerHTML=
-    (bol?kpi('Ticket promedio',S(ing/bol),'money','ingreso ÷ boletas del período'):'')+
+    (bol?kpi('Ticket promedio',S(ing/bol),'money','ingreso ÷ boletas del tramo elegido'):'')+
     (bol?kpi('Prendas por boleta',(uni/bol).toFixed(2),'','cuántas se lleva cada cliente por visita'):'')+
-    (c?kpi('Clientes distintos',N(c.clientes),'','con documento, ene 2025 – jun 2026'):'')+
-    (c?kpi('Volvieron a comprar',N(c.repiten),'',(c.repiten/c.clientes*100).toFixed(0)+'% de los clientes'):'');
-  document.getElementById('insCli').innerHTML=c?
-    ('De <b>'+N(c.clientes)+' clientes</b> con documento entre enero 2025 y junio 2026, <b>'+N(c.repiten)+
-     '</b> compraron más de una vez ('+(c.repiten/c.clientes*100).toFixed(0)+'%) y generaron <b>'+
-     (c.ingresoRepiten/c.ingreso*100).toFixed(0)+'% del ingreso</b> ('+S(c.ingresoRepiten)+' de '+S(c.ingreso)+'). '+
-     'En promedio cada cliente dejó '+S(c.ingreso/c.clientes)+' y volvió '+(c.boletas/c.clientes).toFixed(1)+' veces. '+
-     'El negocio depende de que esa gente regrese, no de traer gente nueva.'):
-    'Los datos de clientes vienen del histórico de boletas. El sistema nuevo recién empieza a registrarlos.';
+    (QC.personas?kpi('Clientes con documento',N(QC.personas),'','personas distintas en el tramo elegido'):'')+
+    (QC.personas?kpi('Volvieron a comprar',N(QC.repiten),'',(QC.repiten/QC.personas*100).toFixed(0)+'% de ellas, dentro del tramo'):'');
+  const pt=document.getElementById('phTic');
+  if(pt)pt.innerHTML='Cuánto gasta un cliente en cada visita: ingreso del mes ÷ boletas del mes. Solo los meses del tramo elegido.';
 }
 /* ==== quién compra: tipos, frecuencia y top de clientes ==== */
 function copiaCel(n){
@@ -2203,8 +2234,82 @@ function copiaCel(n){
   t.select();try{document.execCommand('copy');toast('Celular copiado: '+n);}catch(e){toast('No se pudo copiar');}
   document.body.removeChild(t);
 }
-function pintaQuienCompra(){
+/* Clientes del tramo elegido, contados sobre las ventas registradas prenda por
+   prenda (desde el 19/06/2026). Las boletas anteriores solo guardan el total del
+   día: no se puede saber quién compró en qué fecha, así que de ese tramo solo
+   existe el resumen completo de enero 2025 a junio 2026. */
+function clientesPeriodo(d1,d2,marca){
+  const por={},tipos={};
+  let ingTot=0;
+  VENTAS.forEach(function(v){
+    if(v.f<d1||v.f>d2)return;
+    if(marca&&v.ma!==marca)return;
+    /* Solo las ventas con boleta registrada por el sistema. Las líneas migradas del
+       Excel anterior (19/06 al 11/08/2026) no tienen boleta ni cliente: contarlas
+       daría una boleta por prenda y un tipo de cliente que nunca se anotó. */
+    if(!v.tk)return;
+    const imp=v.q*v.p,tipo=(v.modo||'').trim()||'Sin tipo',tk=v.tk;
+    ingTot+=imp;
+    if(!tipos[tipo])tipos[tipo]={per:{},bol:{},prendas:0,ingreso:0};
+    const T=tipos[tipo];T.prendas+=v.q;T.ingreso+=imp;T.bol[tk]=1;
+    const doc=(v.dni||'').trim();
+    if(!doc)return;
+    T.per[doc]=1;
+    if(!por[doc])por[doc]={nombre:'',tipo:tipo,tk:{},fechas:{},meses:{},mesTk:{},prendas:0,ingreso:0,planilla:0,cel:''};
+    const P=por[doc];
+    if(v.cli&&v.cli.trim())P.nombre=v.cli.trim();
+    if(v.cel&&v.cel.trim())P.cel=v.cel.trim();
+    P.tipo=tipo;P.tk[tk]=1;P.fechas[v.f]=1;
+    const mk=v.f.slice(0,7);P.meses[mk]=1;
+    if(!P.mesTk[mk])P.mesTk[mk]={};P.mesTk[mk][tk]=1;
+    P.prendas+=v.q;P.ingreso+=imp;
+    if(v.pago===PLANILLA)P.planilla+=imp;
+  });
+  /* El documento va parcialmente oculto, igual que en el resumen de boletas. */
+  const tapa=function(d){return d.length>4?(d.slice(0,2)+'·····'+d.slice(-2)):d;};
+  const lista=Object.keys(por).map(function(doc){
+    const P=por[doc],fs=Object.keys(P.fechas).sort(),nTk=Object.keys(P.tk).length;
+    let gap=null;
+    if(fs.length>1){
+      const t0=new Date(fs[0]+'T00:00:00Z'),t1=new Date(fs[fs.length-1]+'T00:00:00Z');
+      gap=Math.round((t1-t0)/86400000/(fs.length-1)*10)/10;
+    }
+    let mTop='',nTop=0;
+    Object.keys(P.mesTk).forEach(function(k){const n=Object.keys(P.mesTk[k]).length;if(n>nTop){nTop=n;mTop=k;}});
+    return {doc:tapa(doc),nombre:P.nombre||'(sin nombre)',tipo:P.tipo,veces:nTk,prendas:P.prendas,
+      gasto:P.ingreso,ticket:nTk?P.ingreso/nTk:0,meses:Object.keys(P.meses).length,vuelve:gap,
+      mes:mTop?(MES[parseInt(mTop.slice(5,7),10)-1]+' '+mTop.slice(0,4)):'',
+      planilla:P.ingreso?Math.round(P.planilla/P.ingreso*100):0,cel:P.cel,mail:''};
+  }).sort(function(a,b){return b.veces-a.veces||b.gasto-a.gasto;});
+  const tp=Object.keys(tipos).map(function(k){
+    return {tipo:k,personas:Object.keys(tipos[k].per).length,boletas:Object.keys(tipos[k].bol).length,
+            prendas:tipos[k].prendas,ingreso:tipos[k].ingreso};
+  }).sort(function(a,b){return b.ingreso-a.ingreso;});
+  return {personas:lista.length,repiten:lista.filter(function(x){return x.veces>1;}).length,
+    lista:lista,tipos:tp,ingreso:ingTot,
+    buckets:[lista.filter(function(x){return x.veces===1;}).length,
+             lista.filter(function(x){return x.veces>1&&x.veces<=3;}).length,
+             lista.filter(function(x){return x.veces>3&&x.veces<=9;}).length,
+             lista.filter(function(x){return x.veces>9;}).length],
+    conCel:lista.filter(function(x){return x.cel;}).length};
+}
+let QC_VISTA={filas:[],sub:''};
+function filaQC(f,i){
+  const pill=/extern|public/i.test(f.tipo)?'neu':(f.tipo==='Empleado'?'warn':'ok');
+  const cel=function(x){return x?'<span class="cel" onclick="copiaCel(\''+x+'\')" title="Clic para copiar">'+x+'</span>':'<span style="color:var(--stone)">—</span>';};
+  return '<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+f.nombre+'<div style="font-size:10.5px;color:var(--stone)">'+f.doc+'</div></td>'+
+    '<td><span class="pill '+pill+'">'+f.tipo+'</span></td><td class="num" style="font-weight:700">'+f.veces+'</td>'+
+    '<td class="num">'+N(f.prendas)+'</td><td class="num">'+S(f.gasto)+'</td><td class="num">'+S(f.ticket)+'</td>'+
+    '<td class="num">'+f.meses+'</td><td class="num">'+(f.vuelve?f.vuelve+' días':'—')+'</td><td>'+f.mes+'</td>'+
+    '<td class="num">'+(f.planilla?f.planilla+'%':'—')+'</td><td>'+cel(f.cel)+'</td><td>'+cel(f.mail)+'</td></tr>';
+}
+function pintaQuienCompra(QC,d1,d2,marca){
   const c=HIST&&HIST.cli;
+  const conBoletas=(d1<CORTE)&&!marca;   /* el tramo alcanza a las boletas antiguas */
+  const txt=textoPeriodo(d1,d2);
+  const pQC=document.getElementById('phQC'),pFR=document.getElementById('phFREQ'),pTop=document.getElementById('phTop');
+  /* Tramo que entra en las boletas antiguas: solo existe el resumen congelado. */
+  if(conBoletas&&c&&c.top){
   if(!c||!c.top){
     document.getElementById('insQC').innerHTML='<b>Todavía no hay datos de clientes.</b> Esta pestaña se alimenta del histórico de boletas '+
       '(tabla tienda_hist_clientes en Supabase). Si sigue vacía, avise al área de Datos e IA.';
@@ -2212,39 +2317,58 @@ function pintaQuienCompra(){
     document.getElementById('tTOP').innerHTML='';
     return;
   }
-  const tot=c.ingreso;
-  const tp=Object.keys(c.tipos).map(function(k){return [k,c.tipos[k]];}).sort(function(a,b){return b[1].ingreso-a[1].ingreso;});
-  document.getElementById('tQC').innerHTML=tp.map(function(t){
-    return '<tr><td style="font-weight:700">'+t[0]+'</td><td class="num">'+N(t[1].personas)+'</td>'+
-    '<td class="num">'+N(t[1].boletas)+'</td><td class="num" style="font-weight:700">'+S(t[1].ingreso)+'</td>'+
-    '<td class="num">'+(t[1].ingreso/tot*100).toFixed(1)+'%</td></tr>';}).join('');
-  const trab=tp.filter(function(t){return t[0]==='Obrero'||t[0]==='Empleado';}).reduce(function(a,t){return a+t[1].ingreso;},0);
-  document.getElementById('insQC').innerHTML=
-    'De <b>'+N(c.clientes)+' personas</b> que compraron entre enero 2025 y junio 2026, <b>'+N(c.repiten)+
-    '</b> volvieron más de una vez ('+(c.repiten/c.clientes*100).toFixed(0)+'%) y dejaron el <b>'+
-    (c.ingresoRepiten/c.ingreso*100).toFixed(0)+'% del ingreso</b>. '+
-    (trab>0?('El personal de la empresa —obreros y empleados— representa <b>'+(trab/tot*100).toFixed(1)+'% de la venta</b> ('+S(trab)+'). '):'')+
-    'Cada persona volvió '+(c.boletas/c.clientes).toFixed(1)+' veces en promedio y dejó '+S(c.ingreso/c.clientes)+'.';
-  const cc=c.conCelular||0;
-  document.getElementById('phTop').innerHTML='Ordenado por quién compra más, así los mejores clientes quedan arriba. '+
-    'Toque un celular o un correo para copiarlo. <b>Celulares registrados: '+N(cc)+' · correos: '+N(c.conCorreo||0)+'</b> — '+
-    'las boletas antiguas nunca pidieron esos datos, se llenan cuando la tienda los registra al cobrar. '+
-    'Compras: enero 2025 a junio 2026.';
-  const B=c.buckets||[0,0,0,0];
+    const tot=c.ingreso;
+    const tp=Object.keys(c.tipos).map(function(k){return [k,c.tipos[k]];}).sort(function(a,b){return b[1].ingreso-a[1].ingreso;});
+    document.getElementById('tQC').innerHTML=tp.map(function(t){
+      return '<tr><td style="font-weight:700">'+t[0]+'</td><td class="num">'+N(t[1].personas)+'</td>'+
+      '<td class="num">'+N(t[1].boletas)+'</td><td class="num" style="font-weight:700">'+S(t[1].ingreso)+'</td>'+
+      '<td class="num">'+(t[1].ingreso/tot*100).toFixed(1)+'%</td></tr>';}).join('');
+    const sub='El tramo elegido ('+txt+') alcanza a las boletas de enero 2025 a junio 2026, '+
+      'que solo guardan el total del día: de esas no se sabe quién compró en qué fecha. '+
+      'Por eso este bloque muestra el resumen completo de enero 2025 a junio 2026 y no sigue el filtro. '+
+      'Para ver los clientes de un tramo, elige fechas desde el 19/06/2026.';
+    if(pQC)pQC.innerHTML='Cada persona según el tipo de cliente de su boleta: público, obrero o empleado. '+sub;
+    if(pFR)pFR.innerHTML='Personas según cuántas boletas hicieron entre enero 2025 y junio 2026.';
+    const B=c.buckets||[0,0,0,0];
+    draw('cFREQ',{type:'bar',data:{labels:['1 vez','2 a 3 veces','4 a 9 veces','10 o más'],
+      datasets:[{data:B,backgroundColor:['#9CB3AC','#7FB3A2','#0F7A5A','#B45309'],borderRadius:6,maxBarThickness:70}]},
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){
+        return x.parsed.y+' personas ('+(x.parsed.y/c.clientes*100).toFixed(0)+'%)';}}}},
+        scales:{y:{beginAtZero:true,title:{display:true,text:'personas'}}}}});
+    const filas=c.top.map(function(t){
+      return {doc:t[0],nombre:t[1],tipo:t[2],veces:t[3],prendas:t[4],gasto:t[5],ticket:t[6],meses:t[7],
+        vuelve:(t[8]===''||t[8]===null||t[8]===undefined)?null:Number(t[8]),mes:t[9],
+        planilla:(t[10]===''||t[10]===null)?0:Number(t[10]),cel:t[11]||'',mail:t[12]||''};});
+    document.getElementById('tTOP').innerHTML=filas.map(filaQC).join('');
+    if(pTop)pTop.innerHTML='Ordenado por quién compra más. Toque un celular o un correo para copiarlo. '+
+      '<b>Celulares registrados: '+N(c.conCelular||0)+' · correos: '+N(c.conCorreo||0)+'</b> — las boletas antiguas nunca pidieron esos datos. '+
+      'Compras de enero 2025 a junio 2026 (este bloque no sigue el filtro).';
+    QC_VISTA={filas:filas,sub:'Compras de enero 2025 a junio 2026 (boletas) · '+N(filas.length)+' clientes'};
+    return;
+  }
+  /* Tramo con registro prenda por prenda: se calcula de verdad sobre el filtro. */
+  const tot=QC.ingreso;
+  const sinDoc=QC.tipos.reduce(function(a,t){return a+t.boletas;},0);
+  document.getElementById('tQC').innerHTML=QC.tipos.length?QC.tipos.map(function(t){
+    return '<tr><td style="font-weight:700">'+t.tipo+'</td><td class="num">'+N(t.personas)+'</td>'+
+    '<td class="num">'+N(t.boletas)+'</td><td class="num" style="font-weight:700">'+S(t.ingreso)+'</td>'+
+    '<td class="num">'+(tot?(t.ingreso/tot*100).toFixed(1):'0.0')+'%</td></tr>';}).join('')
+    :'<tr><td colspan="5">Sin ventas registradas prenda por prenda en el tramo elegido.</td></tr>';
+  if(pQC)pQC.innerHTML='Cada persona según el tipo de cliente de su boleta: público, obrero o empleado. '+
+    'Ventas con boleta registrada por el sistema '+txt+(marca?(', solo '+nmar(marca)):'')+
+    ' — no entran las líneas migradas del Excel anterior, que no guardan cliente. '+
+    '<b>Personas</b> = documentos distintos: las boletas sin documento suman en boletas e ingreso, no en personas.';
+  if(pFR)pFR.innerHTML='Personas según cuántas boletas hicieron '+txt+'. Solo las que dieron su documento ('+N(QC.personas)+' de '+N(sinDoc)+' boletas).';
   draw('cFREQ',{type:'bar',data:{labels:['1 vez','2 a 3 veces','4 a 9 veces','10 o más'],
-    datasets:[{data:B,backgroundColor:['#9CB3AC','#7FB3A2','#0F7A5A','#B45309'],borderRadius:6,maxBarThickness:70}]},
+    datasets:[{data:QC.buckets,backgroundColor:['#9CB3AC','#7FB3A2','#0F7A5A','#B45309'],borderRadius:6,maxBarThickness:70}]},
     options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){
-      return x.parsed.y+' personas ('+(x.parsed.y/c.clientes*100).toFixed(0)+'%)';}}}},
+      return x.parsed.y+' personas'+(QC.personas?(' ('+(x.parsed.y/QC.personas*100).toFixed(0)+'%)'):'');}}}},
       scales:{y:{beginAtZero:true,title:{display:true,text:'personas'}}}}});
-  document.getElementById('tTOP').innerHTML=c.top.map(function(t,i){
-    const pill=t[2]==='Cliente externo'?'neu':(t[2]==='Empleado'?'warn':'ok');
-    return '<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+t[1]+'<div style="font-size:10.5px;color:var(--stone)">'+t[0]+'</div></td>'+
-    '<td><span class="pill '+pill+'">'+t[2]+'</span></td><td class="num" style="font-weight:700">'+t[3]+'</td>'+
-    '<td class="num">'+N(t[4])+'</td><td class="num">'+S(t[5])+'</td><td class="num">'+S(t[6])+'</td>'+
-    '<td class="num">'+t[7]+'</td><td class="num">'+(t[8]?t[8]+' días':'—')+'</td><td>'+t[9]+'</td>'+
-    '<td class="num">'+(t[10]?t[10]+'%':'—')+'</td>'+
-    '<td>'+(t[11]?'<span class="cel" onclick="copiaCel(\''+t[11]+'\')" title="Clic para copiar">'+t[11]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td>'+
-    '<td>'+(t[12]?'<span class="cel" onclick="copiaCel(\''+t[12]+'\')" title="Clic para copiar">'+t[12]+'</span>':'<span style="color:var(--stone)">—</span>')+'</td></tr>';}).join('');
+  document.getElementById('tTOP').innerHTML=QC.lista.length?QC.lista.map(filaQC).join('')
+    :'<tr><td colspan="13">Ninguna venta del tramo elegido tiene documento del cliente.</td></tr>';
+  if(pTop)pTop.innerHTML='Ordenado por quién compra más. Toque un celular para copiarlo. '+
+    'Compras '+txt+(marca?(', solo '+nmar(marca)):'')+'. <b>Celulares registrados: '+N(QC.conCel)+'</b> — se llenan cuando la tienda los pide al cobrar.';
+  QC_VISTA={filas:QC.lista,sub:'Compras '+txt+(marca?(' · '+nmar(marca)):'')+' · '+N(QC.lista.length)+' clientes'};
 }
 /* Con todas las marcas y tipos a la vista, el gráfico crece con la cantidad de barras
    para que ninguna quede aplastada. */
@@ -2263,20 +2387,21 @@ function colorN(i){
 /* Excel de la tabla de clientes: las mismas filas y columnas que se ven en pantalla,
    en el mismo orden. El documento va parcialmente oculto, igual que en la tabla. */
 async function exportarClientes(){
-  const c=HIST&&HIST.cli;
-  if(!c||!c.top||!c.top.length){toast('Todavía no hay datos de clientes para descargar',true);return;}
+  /* Baja exactamente lo que está en la tabla, con el filtro que tenga puesto. */
+  if(!QC_VISTA.filas.length){toast('No hay clientes para descargar con el filtro puesto',true);return;}
   toast('Preparando el Excel…');
   const ok=await cargaExcel();
   if(!ok){toast('No se pudo cargar el generador de Excel. Revise el internet.',true);return;}
-  const filas=c.top.map(function(t,i){
-    return {n:i+1,cli:t[1],doc:t[0],tipo:t[2],veces:t[3],prendas:t[4],gasto:t[5],ticket:t[6],meses:t[7],
-      vuelve:(t[8]===''||t[8]===null||t[8]===undefined)?null:Number(t[8]),mes:t[9],
-      planilla:(t[10]===''||t[10]===null)?null:Number(t[10])/100,cel:t[11]||'',mail:t[12]||''};
+  const filas=QC_VISTA.filas.map(function(t,i){
+    return {n:i+1,cli:t.nombre,doc:t.doc,tipo:t.tipo,veces:t.veces,prendas:t.prendas,gasto:t.gasto,
+      ticket:t.ticket,meses:t.meses,vuelve:(t.vuelve===null||t.vuelve===undefined||t.vuelve==='')?null:Number(t.vuelve),
+      mes:t.mes,planilla:(t.planilla===null||t.planilla==='')?null:Number(t.planilla)/100,
+      cel:t.cel||'',mail:t.mail||''};
   });
   try{
     await exportarExcelLIVES({
       titulo:document.title+' — Clientes que más compran',
-      sub:'Compras de enero 2025 a junio 2026 (boletas) · '+N(filas.length)+' clientes',
+      sub:QC_VISTA.sub,
       formula:'Ordenado por número de compras (boletas). Ticket = gasto ÷ compras. Planilla = parte de sus compras pagada por descuento de planilla. Documento parcialmente oculto.',
       origen:'LIVES Tienda',
       hoja:'Clientes',
@@ -2304,9 +2429,25 @@ async function exportarClientes(){
   }catch(e){toast('No se pudo generar el Excel: '+e.message,true);}
 }
 /* ==== detalle por prenda (solo período con registro completo) ==== */
-function pintaDetalle(desdeF){
-  const fm=document.getElementById('fmarcaD').value;
-  const V=VENTAS.filter(function(v){return v.f>=desdeF&&(!fm||v.ma===fm);});
+function pintaDetalle(d1,d2,fm){
+  const V=VENTAS.filter(function(v){return v.f>=d1&&v.f<=d2&&(!fm||v.ma===fm);});
+  /* Talla, color y marca solo existen en lo registrado prenda por prenda (19/06/2026
+     en adelante). Si el tramo empieza antes, estos paneles cubren solo esa parte. */
+  const txt=textoPeriodo(V.length?V[0].f:d1,V.length?V[V.length-1].f:d2);
+  const nota=(d1<CORTE?' Solo las ventas registradas prenda por prenda, '+txt+': las boletas anteriores no guardan talla, color ni marca.':' Ventas '+txt+'.')+
+             (fm?(' Solo '+nmar(fm)+'.'):'');
+  [['phTalla','Unidades, no soles: sirve para saber qué talla reponer.'],
+   ['phMarca','Marca o cliente de origen de la prenda.'],
+   ['phTipo','Ingreso por tipo de prenda.'],
+   ['phRank','Ordenado por soles vendidos.'],
+   ['phDet','Todas las combinaciones con al menos una venta.']].forEach(function(p){
+    const e=document.getElementById(p[0]);if(e)e.innerHTML=p[1]+nota;});
+  if(!V.length){
+    ['c2','c3','c4'].forEach(function(id){if(CH[id]){CH[id].destroy();delete CH[id];}});
+    document.getElementById('rk').innerHTML='';
+    document.getElementById('tdet').innerHTML='<tr><td colspan="5">Sin ventas registradas prenda por prenda en el tramo elegido.</td></tr>';
+    return;
+  }
   const ing=V.reduce(function(a,v){return a+v.q*v.p;},0),uni=V.reduce(function(a,v){return a+v.q;},0);
   const combos={};V.forEach(function(v){const k=llave(v);if(!combos[k])combos[k]={i:0,u:0,v:v};combos[k].i+=v.q*v.p;combos[k].u+=v.q;});
   const ord=Object.keys(combos).map(function(k){return [k,combos[k].i];}).sort(function(a,b){return b[1]-a[1];});
@@ -2315,12 +2456,6 @@ function pintaDetalle(desdeF){
   const maOrd=Object.keys(porMa).map(function(k){return [k,porMa[k]];}).sort(function(a,b){return b[1]-a[1];});
   const porTa={};V.forEach(function(v){porTa[v.ta]=(porTa[v.ta]||0)+v.q;});
   const taOrd=Object.keys(porTa).map(function(k){return [k,porTa[k]];}).sort(function(a,b){return b[1]-a[1];});
-  document.getElementById('insight').innerHTML=ord.length?
-    ('<b>'+n80+' combinaciones de '+ord.length+'</b> ('+(n80/ord.length*100).toFixed(0)+
-    '%) concentran el <b>80% del ingreso</b>. La marca que más factura es <b>'+nmar(maOrd[0][0])+'</b> con '+S(maOrd[0][1])+
-    ' ('+(maOrd[0][1]/ing*100).toFixed(0)+'%) y la talla que más rota es <b>'+taOrd[0][0]+'</b> con '+N(taOrd[0][1])+
-    ' prendas. Cada prenda deja en promedio '+S(ing/uni)+'; <b>el margen no se puede calcular</b> porque no hay costo cargado.'):
-    'Sin ventas en el período elegido.';
   const tal=taOrd;
   draw('c2',{type:'doughnut',data:{labels:tal.map(function(t){return 'Talla '+t[0];}),datasets:[{data:tal.map(function(t){return t[1];}),
     backgroundColor:tal.map(function(_,i){return colorN(i);}),borderWidth:0}]},
@@ -2368,10 +2503,32 @@ g.addColorStop(0,'rgba(180,83,9,.22)');g.addColorStop(1,'rgba(180,83,9,0)');retu
 options:{plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});}
 
 /* ================= filtros ================= */
+let filtroListo=false;
+/* Los años y los meses del filtro se rehacen cada vez que llegan datos nuevos:
+   el histórico de boletas carga después que las ventas y agrega el año 2025. */
+function llenaPeriodos(){
+  /* Años con ventas y meses, para los atajos del filtro. La primera vez se abre
+     en el tramo con registro prenda por prenda (desde el 19/06/2026) y de ahí
+     se cambia libremente con el año, el mes o las fechas. */
+  const fs=Object.keys(serieDiaria('')).sort();
+  if(fs.length){
+    ANIOS=Array.from(new Set(fs.map(function(x){return x.slice(0,4);}))).sort();
+    const eA=document.getElementById('fAnio'),eM=document.getElementById('fMes');
+    const vA=eA.value,vM=eM.value;
+    eA.innerHTML='<option value="">Todos los años</option>'+ANIOS.map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join('');
+    eM.innerHTML='<option value="">Todos los meses</option>'+MES.map(function(m,i){
+      return '<option value="'+('0'+(i+1)).slice(-2)+'">'+m.charAt(0).toUpperCase()+m.slice(1)+'</option>';}).join('');
+    eA.value=vA;eM.value=vM;
+    const e1=document.getElementById('fd1'),e2=document.getElementById('fd2');
+    e1.min=e2.min=fs[0];e1.max=e2.max=fs[fs.length-1];
+    if(!filtroListo){filtroListo=true;e1.value=(fs[0]<CORTE?CORTE:fs[0]);}
+  }
+}
 function llenaFiltros(){
   if(FECHAS.length){
     document.getElementById('rd1').min=document.getElementById('rd2').min=FECHAS[0];
   }
+  llenaPeriodos();
   const um={},uc={};
   VENTAS.forEach(function(v){um[v.ma]=1;uc[v.ca]=1;});
   const hm='<option value="">Todas las marcas</option>'+Object.keys(um).sort().map(function(k){return '<option value="'+k+'">'+nmar(k)+'</option>';}).join('');
@@ -4050,13 +4207,12 @@ var TND={
   detecta:function(){return typeof pintaDash==='function'&&typeof serieDiaria==='function'&&typeof agrupaM==='function'&&typeof VENTAS!=='undefined'&&document.querySelector('#v-dash .bar button[onclick*="print"]');},
   pone:function(){boton(document.querySelector('#v-dash .bar button[onclick*="print"]'),true,'btn',TND.exporta);},
   exporta:function(){
-    var M=serieDiaria(),fechas=Object.keys(M).sort();
+    var selM=document.getElementById('fmarcaD'),fm=selM?selM.value:'',fmTxt=fm&&selM.selectedIndex>=0?selM.options[selM.selectedIndex].text:'Todas las marcas';
+    var M=serieDiaria(fm),fechas=Object.keys(M).sort();
     if(typeof FECHAS==='undefined'||!FECHAS.length)throw new Error('todavía no cargan las ventas');
     var F=FECHAS.slice(),desde=F[0],hasta=F[F.length-1],CORTE_T=(typeof CORTE!=='undefined'?CORTE:'2026-06-19'),conHist=desde<CORTE_T;
-    var PER={'7':'Últimos 7 días','30':'Últimos 30 días','tienda':'Desde el 19 jun','todo':'Todo (desde 2025)'};
-    var selM=document.getElementById('fmarcaD'),fm=selM?selM.value:'',fmTxt=fm&&selM.selectedIndex>=0?selM.options[selM.selectedIndex].text:'Todas las marcas';
     var dmy=function(f){return f.slice(8)+'/'+f.slice(5,7)+'/'+f.slice(0,4);};
-    var lbl=(PER[per]||per)+' ('+dmy(desde)+' al '+dmy(hasta)+')';
+    var lbl='Del '+dmy(desde)+' al '+dmy(hasta);
     /* Indicadores: mismos cálculos que las tarjetas de arriba */
     var ing=0,uni=0,bol=0,dias=0,ingB=0,uniB=0;
     F.forEach(function(f){var d=M[f];ing+=d.i;uni+=d.u;bol+=d.b;if(d.i>0)dias++;if(d.b>0){ingB+=d.i;uniB+=d.u;}});
@@ -4069,33 +4225,34 @@ var TND={
     if(bol)kf.push({k:'Ticket promedio',v:ingB/bol,u:'S/',n:bol+' boletas · '+(uniB/bol).toFixed(2)+' prendas por boleta (solo días con boletas contadas)'});
     kf.push({k:'Venta promedio por día',v:dias?ing/dias:null,u:'S/',n:'solo días con al menos una venta'});
     var kpi=kf.map(function(x){return {k:x.k,m:x.u==='S/'?x.v:null,p:x.u==='%'?x.v:null,e:x.u==='und'?x.v:null,n:x.n};});
-    var res=[{titulo:'Indicadores del período — '+lbl,nota:'Las tarjetas no cambian con el filtro de marca (igual que en pantalla).',
+    var res=[{titulo:'Indicadores del período — '+lbl,nota:'Mismos números que las tarjetas de la pantalla, con el filtro puesto'+(fm?' (solo '+fmTxt+')':'')+'.',
       columnas:[{campo:'k',titulo:'Indicador',tipo:'texto'},{campo:'m',titulo:'Soles',tipo:'moneda'},{campo:'e',titulo:'Prendas',tipo:'entero'},{campo:'p',titulo:'Porcentaje',tipo:'porcentaje'},{campo:'n',titulo:'Cómo se calcula',tipo:'texto'}],filas:kpi}];
     /* Ingresos en el tiempo: misma agrupación elegida en pantalla */
     var G=agrupaM(M,F);
     res.push({titulo:'Ingresos en el tiempo (por '+G.nom+')',columnas:[{campo:'t',titulo:G.nom.charAt(0).toUpperCase()+G.nom.slice(1),tipo:'texto'},{campo:'v',titulo:'Ingresos',tipo:'moneda'}],
       filas:G.labTxt.map(function(t,i){return {t:t,v:G.val[i]};})});
-    /* Año contra año: ingresos por mes calendario y año (toda la historia, como en pantalla) */
-    var mes={};Object.keys(M).forEach(function(f){var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
+    /* Año contra año: cada año en la misma ventana de días del filtro, como en pantalla */
+    var wA=(typeof ventanaAnual==='function')?ventanaAnual(desde,hasta):null;
+    var mes={};Object.keys(M).forEach(function(f){if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
     var anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
     var colAA=[{campo:'m',titulo:'Mes',tipo:'texto'}].concat(anios.map(function(a){return {campo:'a'+a,titulo:'Ingresos '+a,tipo:'moneda'};}));
     var filAA=MES.map(function(nm,k){var o={m:nm.charAt(0).toUpperCase()+nm.slice(1)},hay=false;anios.forEach(function(a){var x=mes[a+'-'+('0'+(k+1)).slice(-2)];o['a'+a]=x?x.i:null;if(x)hay=true;});return hay?o:null;}).filter(Boolean);
-    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año. El año en curso puede tener su último mes incompleto.',columnas:colAA,filas:filAA});
+    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año'+(wA?', midiendo cada año en el mismo tramo del filtro ('+wA.a.slice(3)+'/'+wA.a.slice(0,2)+' al '+wA.b.slice(3)+'/'+wA.b.slice(0,2)+')':'')+'. El año en curso puede tener su último mes incompleto.',columnas:colAA,filas:filAA});
     /* Clientes y tickets: ticket y prendas por boleta por mes (solo meses con boletas) */
-    var mb={};Object.keys(M).forEach(function(f){if(!M[f].b)return;var k=f.slice(0,7);if(!mb[k])mb[k]={i:0,u:0,b:0};mb[k].i+=M[f].i;mb[k].u+=M[f].u;mb[k].b+=M[f].b;});
+    var mb={};F.forEach(function(f){if(!M[f]||!M[f].b)return;var k=f.slice(0,7);if(!mb[k])mb[k]={i:0,u:0,b:0};mb[k].i+=M[f].i;mb[k].u+=M[f].u;mb[k].b+=M[f].b;});
     var ks=Object.keys(mb).sort();
     if(ks.length)res.push({titulo:'Clientes y tickets por mes',nota:'Solo días con boletas contadas: ticket = ingreso ÷ boletas; prendas por boleta = prendas ÷ boletas. Sin datos personales de clientes.',
       columnas:[{campo:'m',titulo:'Mes',tipo:'texto'},{campo:'b',titulo:'Boletas',tipo:'entero'},{campo:'i',titulo:'Ingresos',tipo:'moneda'},{campo:'t',titulo:'Ticket promedio',tipo:'moneda'},{campo:'u',titulo:'Prendas por boleta',tipo:'decimal'}],
       filas:ks.map(function(k){var x=mb[k];return {m:MES[parseInt(k.slice(5,7))-1]+' '+k.slice(0,4),b:x.b,i:x.i,t:x.i/x.b,u:x.u/x.b};})});
     /* Qué se vende y detalle por prenda: solo desde el 19 jun (antes no hay marca, talla ni color) */
     var V=VENTAS.filter(function(v){return v.f>=desde&&v.f<=hasta&&(!fm||v.ma===fm);});
-    if(!conHist&&V.length){
+    if(V.length){
       var ingV=V.reduce(function(a,v){return a+v.q*v.p;},0),uniV=V.reduce(function(a,v){return a+v.q;},0);
       var agr=function(key,nom){var o={};V.forEach(function(v){var k=v[key];if(!o[k])o[k]={i:0,u:0};o[k].i+=v.q*v.p;o[k].u+=v.q;});
         return Object.keys(o).map(function(k){return {k:nom(k),u:o[k].u,i:o[k].i,pi:ingV?o[k].i/ingV:null,pu:uniV?o[k].u/uniV:null};}).sort(function(a,b){return b.i-a.i;});};
       var colQ=function(t){return [{campo:'k',titulo:t,tipo:'texto'},{campo:'u',titulo:'Prendas',tipo:'entero'},{campo:'i',titulo:'Ingresos',tipo:'moneda'},{campo:'pi',titulo:'% del ingreso',tipo:'porcentaje'},{campo:'pu',titulo:'% de las prendas',tipo:'porcentaje'}];};
       var tot=function(f){return f.concat([{k:'Total',u:uniV,i:ingV,pi:1,pu:1,__total:true}]);};
-      var nm=' ('+fmTxt+')';
+      var nm=' ('+fmTxt+')'+(conHist?' · solo desde el 19/06/2026':'');
       res.push({titulo:'Qué se vende — por marca'+nm,columnas:colQ('Marca'),filas:tot(agr('ma',nmar))});
       res.push({titulo:'Qué se vende — por tipo de prenda'+nm,columnas:colQ('Tipo de prenda'),filas:tot(agr('ca',ncat))});
       res.push({titulo:'Qué se vende — por talla'+nm,nota:'Sirve para saber qué talla reponer (en pantalla se mira en prendas).',columnas:colQ('Talla'),filas:tot(agr('ta',function(k){return k;}).sort(function(a,b){return b.u-a.u;}))});
