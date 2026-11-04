@@ -1957,9 +1957,21 @@ function ddmm(f){return f.slice(8)+'/'+f.slice(5,7);}
 let ANIOS=[];
 const PLANILLA='Descuento por planilla';
 function finMes(a,m){const d=new Date(Date.UTC(+a,+m,0));return d.toISOString().slice(0,10);}
+/* Mes cerrado (04/11/2026): con "Todos los años" o con un año elegido, el tablero llega
+   hasta el último día del mes anterior; el mes en curso, que apenas empieza, no se compara.
+   Elegir un mes o escribir fechas a mano sí muestra lo que se pida. Los años anteriores
+   salen completos. TOPE guarda la fecha de corte vigente ('' si no se recortó nada). */
+let TOPE='';
+function cierreMes(){const d=new Date();d.setDate(0);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function rangoSel(){
   const a=document.getElementById('fd1').value||'',b=document.getElementById('fd2').value||'';
-  return (a&&b&&b<a)?{d1:b,d2:a}:{d1:a,d2:b};
+  const r=(a&&b&&b<a)?{d1:b,d2:a}:{d1:a,d2:b};
+  const ya=document.getElementById('fAnio').value,ym=document.getElementById('fMes').value;
+  const auto=(!ya&&!a&&!b)||(ya&&!ym);
+  const c=cierreMes();
+  TOPE='';
+  if(auto&&(!r.d2||r.d2>c)){r.d2=c;TOPE=c;}
+  return r;
 }
 function filtroAnioMes(){
   const eA=document.getElementById('fAnio'),eM=document.getElementById('fMes');
@@ -2156,6 +2168,7 @@ function pintaAnioAnio(M,d1,d2,marca){
   const m1=w?parseInt(w.a.slice(0,2),10):1,m2=w?parseInt(w.b.slice(0,2),10):12;
   const mes={};
   Object.keys(M).forEach(function(f){
+    if(TOPE&&f>TOPE)return;
     if(w&&(f.slice(5)<w.a||f.slice(5)>w.b))return;
     const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
     mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
@@ -4361,11 +4374,11 @@ var TND={
     }
     /* Año contra año: cada año en la misma ventana de días del filtro, como en pantalla */
     var wA=(typeof ventanaAnual==='function')?ventanaAnual(desde,hasta):null;
-    var mes={};Object.keys(M).forEach(function(f){if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
+    var mes={};Object.keys(M).forEach(function(f){if(TOPE&&f>TOPE)return;if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
     var anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
     var colAA=[{campo:'m',titulo:'Mes',tipo:'texto'}].concat(anios.map(function(a){return {campo:'a'+a,titulo:'Ingresos '+a,tipo:'moneda'};}));
     var filAA=MES.map(function(nm,k){var o={m:nm.charAt(0).toUpperCase()+nm.slice(1)},hay=false;anios.forEach(function(a){var x=mes[a+'-'+('0'+(k+1)).slice(-2)];o['a'+a]=x?x.i:null;if(x)hay=true;});return hay?o:null;}).filter(Boolean);
-    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año'+(wA?', midiendo cada año en el mismo tramo del filtro ('+wA.a.slice(3)+'/'+wA.a.slice(0,2)+' al '+wA.b.slice(3)+'/'+wA.b.slice(0,2)+')':'')+'. El año en curso puede tener su último mes incompleto.',columnas:colAA,filas:filAA});
+    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año'+(wA?', midiendo cada año en el mismo tramo del filtro ('+wA.a.slice(3)+'/'+wA.a.slice(0,2)+' al '+wA.b.slice(3)+'/'+wA.b.slice(0,2)+')':'')+'. El año en curso llega hasta el último mes cerrado.',columnas:colAA,filas:filAA});
     /* Clientes y tickets: ticket y prendas por boleta por mes (solo meses con boletas) */
     var mb={};F.forEach(function(f){if(!M[f]||!M[f].b)return;var k=f.slice(0,7);if(!mb[k])mb[k]={i:0,u:0,b:0};mb[k].i+=M[f].i;mb[k].u+=M[f].u;mb[k].b+=M[f].b;});
     var ks=Object.keys(mb).sort();
