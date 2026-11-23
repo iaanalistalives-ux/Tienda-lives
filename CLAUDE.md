@@ -4,7 +4,7 @@ Las reglas generales de trabajo están en el repo privado `lives-instrucciones` 
 
 ## Qué hace
 - `index.html` — **caja de la tienda**:
-  - Vender: tipo de cliente (Público, Empleado, Obrero), "Precio exclusivo" y "Descuento por planilla" (no Público). Datos del cliente opcionales (con DNI de 8 dígitos se autocompleta). La prenda se arma en 5 pasos: marca → tipo de prenda (por género) → estilo → color → talla; el precio sale del tipo de prenda y solo se rebaja si no es Público o es exclusivo, nunca por encima de la lista. Cada paso permite agregar, modificar o quitar valores del catálogo. El código LT-XXXXXX lo asigna la base al cobrar. Formas de pago: Efectivo, Yape / Plin, Tarjeta, Transferencia (o descuento por planilla).
+  - Vender: tipo de cliente (Público, Empleado, Obrero), "Precio exclusivo" y "Descuento por planilla" (no Público). Datos del cliente opcionales (con DNI de 8 dígitos se autocompleta). La prenda se arma en 5 pasos: marca → tipo de prenda (por género) → estilo → color → talla y cantidad (cada talla con − y +; tocar la talla suma 1). Un solo "Agregar N prendas" mete todas las tallas; después quedan marcados marca, tipo y estilo (solo se elige otro color y tallas); "Empezar otra prenda desde cero" limpia todo. Precio automático (23/11/2026): Empleado u Obrero 10 % menos; Precio exclusivo 30 % menos (reemplaza al 10 %, también para Público). La vendedora puede escribir otro precio, nunca mayor al de lista. Si cambia el tipo de cliente o el exclusivo con prendas en la venta, todo el carrito pasa al precio automático nuevo. Cada paso permite agregar, modificar o quitar valores del catálogo. El código LT-XXXXXX lo asigna la base al cobrar. Formas de pago: Efectivo, Yape / Plin, Tarjeta, Transferencia (o descuento por planilla).
   - "Ventas de hoy" con + Cliente, Corregir y Anular por ticket. Registro de ventas con filtros, KPIs, regla 500, corrección de boleta completa y Excel LIVES (sin datos personales).
   - La cuenta del portal es compartida: quien vende se elige con botones y se guarda en el equipo; sin vendedora no se cobra, corrige ni anula.
   - Un token por intento evita duplicar una venta. No hay control de stock ni cola sin conexión.
@@ -26,6 +26,5 @@ Según las entradas por el portal de los últimos 30 días al 21/10/2026: la cue
 - A Sistemas: `tienda_permiso` es la pieza que reemplazan con su seguridad.
 
 ## Pendientes vistos al escribir esto (21/10/2026)
-- `index.html`: en `agregar()` el aviso "Agregado: …" usa una variable no definida (`c`); la prenda sí entra al carrito, pero el aviso no sale.
 - `index.html` trae las vistas Configuración (libreta de clientes, códigos creados) y Dashboard, sin botón para llegar a ellas.
 - `ventas.html`: la vista Registro no tiene acceso y su `ir()` tiene un `if(v==='cfg')` sin cuerpo que impediría cargarla; el aviso "Todavía no hay datos de clientes" nunca aparece (condición mal anidada).

@@ -796,6 +796,21 @@ box-shadow:var(--sh);transition:transform .08s;}
 .opt.sel .pr{background:rgba(255,255,255,.22);color:#fff;}
 .opt .sw{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
 .opt.talla{min-width:62px;justify-content:center;font-size:16px;}
+/* Talla con cantidad: tocar la talla suma 1; − y + ajustan. */
+.tqs{display:flex;flex-wrap:wrap;gap:8px;}
+.tq{background:#fff;border:2px solid var(--warm);border-radius:10px;box-shadow:var(--sh);
+display:flex;flex-direction:column;align-items:stretch;min-width:84px;overflow:hidden;}
+.tq.on{border-color:var(--sage);background:#E7F4EF;}
+.tq .tqn{background:none;border:0;cursor:pointer;font-size:16px;font-weight:700;color:#33413D;
+padding:10px 8px 6px;min-height:40px;font-family:inherit;}
+.tq.on .tqn{color:var(--sage-dark);}
+.tq .tqc{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--warm);}
+.tq .tqc button{background:none;border:0;cursor:pointer;font-size:20px;font-weight:700;color:var(--sage-dark);
+width:32px;height:36px;font-family:inherit;}
+.tq .tqc span{font-size:16px;font-weight:700;min-width:20px;text-align:center;color:#33413D;}
+.tq:not(.on) .tqc span{color:var(--stone);font-weight:400;}
+.nuevap{background:none;border:0;color:var(--sage-dark);font-weight:700;font-size:13.5px;cursor:pointer;
+text-decoration:underline;padding:6px 0;font-family:inherit;}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start;}
 @media(max-width:560px){.cols{grid-template-columns:1fr;}}
 .colg{background:var(--warm-light);border-radius:10px;padding:10px;align-self:start;}
@@ -1036,13 +1051,13 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph">Se elige antes de marcar la prenda. Son las mismas categorías del dashboard.</div>
               <div class="modos" id="modos">
                 <button class="on" onclick="setModo('Publico')">Público<br><span style="font-weight:400;font-size:11px">cliente externo</span></button>
-                <button onclick="setModo('Empleado')">Empleado<br><span style="font-weight:400;font-size:11px">personal administrativo</span></button>
-                <button onclick="setModo('Obrero')">Obrero<br><span style="font-weight:400;font-size:11px">personal de planta</span></button>
+                <button onclick="setModo('Empleado')">Empleado<br><span style="font-weight:400;font-size:11px">personal administrativo · 10 %</span></button>
+                <button onclick="setModo('Obrero')">Obrero<br><span style="font-weight:400;font-size:11px">personal de planta · 10 %</span></button>
               </div>
               <div class="exclu" id="exclu" onclick="toggleExclusivo()">
                 <div class="sw2"><span></span></div>
                 <div><div class="t1">Precio exclusivo</div>
-                <div class="t2">Descuento especial. Se puede activar para cualquiera de los tres.</div></div>
+                <div class="t2">30 % de descuento, en lugar del 10 %. Se puede activar para cualquiera de los tres.</div></div>
               </div>
               <div class="exclu pla" id="planilla" onclick="togglePlanilla()" style="display:none">
                 <div class="sw2"><span></span></div>
@@ -1620,6 +1635,8 @@ function pedirVendedora(falta){
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
 let modo='Publico',exclusivo=false,planilla=false,tokenVenta='';
+/* TQ = cantidad por talla de la prenda que se está marcando; pMan = precio escrito a mano (null = automático). */
+let TQ={},pMan=null;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -1833,7 +1850,7 @@ function optOne(o,k){
   return '<div class="opt'+(o.talla?' talla':'')+(sel[k]===o.v?' sel':'')+'" onclick="pick(\''+k+'\',\''+o.v+'\')">'+sw+o.l+pr+'</div>';
 }
 function stepHTML(n,t,val,cuerpo){
-  return '<div class="step'+(val?' done':'')+'"><div class="steph"><div class="stepn">'+n+'</div>'+
+  return '<div class="step'+(val?' done':'')+'" id="st'+n+'"><div class="steph"><div class="stepn">'+n+'</div>'+
     '<div class="stept">'+t+'</div><div class="stepv">'+(val||'')+'</div></div>'+cuerpo+'</div>';
 }
 function pintaPasos(){
@@ -1856,12 +1873,44 @@ function pintaPasos(){
      '<div class="buscacol"><input id="bcol" type="search" placeholder="Escriba el color: ne, beig, azul…" '+
      'oninput="filtraColor(this.value)" value="'+fcol+'"><span style="font-size:12px;color:var(--stone)" id="ccolh"></span></div>'+
      '<div class="colgrid" id="optsCol"></div><div class="addop" onclick="abrirAdd(\'col\',1)">+ Color que no está</div>');
-  H+=stepHTML(5,'Talla',sel.ta?'Talla '+sel.ta:'',
-     '<div class="opts">'+TAL.map(function(t){return optOne({v:t,l:t,talla:1},'ta');}).join('')+
+  H+=stepHTML(5,'Talla y cantidad',txtTallas(),
+     '<div class="tqs">'+TAL.map(tqHTML).join('')+
      '</div><div class="addop" onclick="abrirAdd(\'tal\',1)">+ Talla que no está</div>');
   document.getElementById('pasos').innerHTML=H;
   pintaCol();pintaResumen();
 }
+/* ===== Tallas con cantidad =====
+   Tocar la talla suma una prenda; − y + ajustan. Así 2 M + 1 L se marcan juntas
+   y entran al carrito con un solo "Agregar". */
+function totTallas(){let n=0;for(const k in TQ)n+=TQ[k];return n;}
+function txtTallas(){
+  const l=TAL.filter(function(t){return TQ[t]>0;});
+  return l.length?l.map(function(t){return t+' ×'+TQ[t];}).join(' · '):'';
+}
+function tqHTML(t){
+  const q=TQ[t]||0,a=JSON.stringify(String(t)).replace(/"/g,'&quot;');
+  return '<div class="tq'+(q?' on':'')+'"><button type="button" class="tqn" onclick="sumaT('+a+',1)">'+t+'</button>'+
+    '<div class="tqc"><button type="button" onclick="sumaT('+a+',-1)" aria-label="Quitar una">−</button>'+
+    '<span>'+q+'</span><button type="button" onclick="sumaT('+a+',1)" aria-label="Sumar una">+</button></div></div>';
+}
+function sumaT(t,d){
+  const q=Math.max(0,(TQ[t]||0)+d);
+  if(q)TQ[t]=q;else delete TQ[t];
+  const st=document.getElementById('st5');
+  if(st){
+    st.querySelector('.tqs').innerHTML=TAL.map(tqHTML).join('');
+    st.className='step'+(totTallas()?' done':'');
+    st.querySelector('.stepv').textContent=txtTallas();
+  }
+  pintaResumen();
+}
+/* Descuento automático: Empleado u Obrero 10 %; Precio exclusivo 30 % (reemplaza
+   al 10 %, no se suman; vale también para Público). Decisión de Christian, 23/11/2026,
+   igual a lo que ya se cobraba a mano. La vendedora puede escribir otro precio,
+   nunca mayor al de lista. */
+function pctAuto(){return exclusivo?30:(modo!=='Publico'?10:0);}
+function precioAuto(lista){return Math.round(lista*(100-pctAuto()))/100;}
+function prendaNueva(){sel={ma:null,ca:null,es:null,co:null,ta:null};TQ={};pMan=null;fcol='';pintaPasos();}
 /* Ordena los colores por tono: primero los neutros de claro a oscuro,
    después los de color siguiendo el arcoíris. Así los parecidos quedan
    juntos y el ojo los encuentra sin leer. Funciona también con los
@@ -1909,65 +1958,89 @@ function pintaCol(){
 function filtraColor(v){fcol=v;pintaCol();}
 function pick(k,v){
   sel[k]=(sel[k]===v?null:v);
+  if(k==='ca')pMan=null;
   const foco=document.activeElement&&document.activeElement.id==='bcol';
   pintaPasos();
   if(foco){const b=document.getElementById('bcol');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length);}}
 }
 function pintaResumen(){
   const r=document.getElementById('resumen');
-  const falta=['ma','ca','es','co','ta'].filter(function(k){return !sel[k];});
+  const algo=sel.ma||sel.ca||sel.es||sel.co||totTallas();
+  const nueva=algo?'<button type="button" class="nuevap" onclick="prendaNueva()">Empezar otra prenda desde cero</button>':'';
+  const falta=['ma','ca','es','co'].filter(function(k){return !sel[k];});
+  if(!totTallas())falta.push('ta');
   if(falta.length){
-    const nom={ma:'la marca',ca:'el tipo de prenda',es:'el estilo',co:'el color',ta:'la talla'};
-    r.innerHTML='<div style="color:var(--stone);font-size:14px">Falta marcar: <b>'+falta.map(function(k){return nom[k];}).join(', ')+'</b></div>';
+    const nom={ma:'la marca',ca:'el tipo de prenda',es:'el estilo',co:'el color',ta:'la talla y cuántas'};
+    r.innerHTML='<div style="color:var(--stone);font-size:14px">Falta marcar: <b>'+falta.map(function(k){return nom[k];}).join(', ')+'</b></div>'+nueva;
     return;
   }
-  const c=NCAT[sel.ca],pre=c?c[2]:0,libre=puedeRebajar();
+  const x=precioActual(),pre=x.lista,libre=puedeRebajar(),n=totTallas();
   const campoPrecio=libre
-    ? '<div class="fg"><label>Precio a cobrar</label><input id="qprec" type="number" min="0" step="0.5" value="'+(pre||'')+'" oninput="calcTot()"></div>'
-    : '<div class="fg"><label>Precio unitario</label><div class="fijo">'+(pre?S(pre):'sin precio')+'</div></div>';
-  r.innerHTML='<div class="rline">'+descP(sel)+'</div>'+
-    '<div class="rsku">El código LT se asigna solo al cobrar</div>'+
+    ? '<div class="fg"><label>Precio c/u</label><input id="qprec" type="number" min="0" step="0.5" value="'+(pre?x.p:'')+'" oninput="pMan=parseFloat(this.value);calcTot()"></div>'
+    : '<div class="fg"><label>Precio c/u</label><div class="fijo">'+(pre?S(pre):'sin precio')+'</div></div>';
+  r.innerHTML='<div class="rline">'+ncat(sel.ca)+' · '+nest(sel.es)+' · '+ncol(sel.co)+' · '+nmar(sel.ma)+'</div>'+
+    '<div class="rsku">Tallas: '+txtTallas()+' · el código LT se asigna solo al cobrar</div>'+
     '<div class="rrow">'+
-    '<div class="fg"><label>Cantidad</label><input id="qcant" type="number" min="1" value="1" oninput="calcTot()"></div>'+
+    '<div class="fg"><label>Prendas</label><div class="fijo" style="color:var(--petrol)">'+n+'</div></div>'+
     campoPrecio+
-    (pre?'<button class="btn primary" style="padding:13px 22px;font-size:16px" onclick="agregar()">Agregar a la venta</button>':
+    (pre?'<button class="btn primary" style="padding:13px 22px;font-size:16px" onclick="agregar()">Agregar '+n+(n===1?' prenda':' prendas')+'</button>':
          '<button class="btn" disabled style="padding:13px 22px;font-size:16px">Agregar a la venta</button>')+
-    '<div class="rtot"><div class="l">Subtotal</div><div class="v" id="qtot">'+S(pre)+'</div></div></div>'+
-    '<div id="qnota" style="margin-top:8px;font-size:12px;color:var(--stone)">'+
-    (pre?(libre?'Precio de lista '+S(pre)+'. Puede escribir uno menor; no se puede cobrar más.'
-               :'El precio viene de Configuración y no se puede cambiar al vender.')
-        :'<span style="color:var(--rose);font-weight:700">Este tipo de prenda no tiene precio cargado.</span>')+'</div>';
+    '<div class="rtot"><div class="l">Subtotal</div><div class="v" id="qtot">'+S(n*x.p)+'</div></div></div>'+
+    '<div id="qnota" style="margin-top:8px;font-size:12px;color:var(--stone)"></div>'+nueva;
+  if(!pre)document.getElementById('qnota').innerHTML='<span style="color:var(--rose);font-weight:700">Este tipo de prenda no tiene precio cargado.</span>';
+  else calcTot();
 }
 function precioActual(){
   const c=NCAT[sel.ca],lista=c?c[2]:0;
   if(!puedeRebajar())return {p:lista,lista:lista};
-  const e=document.getElementById('qprec');
-  const v=e?parseFloat(e.value):NaN;
-  return {p:(isNaN(v)?lista:v),lista:lista};
+  return {p:(pMan!==null&&!isNaN(pMan))?pMan:precioAuto(lista),lista:lista};
 }
 function calcTot(){
-  const q=parseFloat(document.getElementById('qcant').value)||0;
   const x=precioActual();
-  document.getElementById('qtot').textContent=S(q*x.p);
+  const t=document.getElementById('qtot');if(t)t.textContent=S(totTallas()*x.p);
   const n=document.getElementById('qnota');
-  if(n&&puedeRebajar()&&x.lista>0){
-    if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
-    else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span>';
-    else n.innerHTML='Precio de lista '+S(x.lista)+' · sin descuento';
-  }
+  if(!n||!(x.lista>0))return;
+  if(!puedeRebajar()){n.innerHTML='Precio de lista. Sin descuento para público.';return;}
+  const pa=pctAuto(),auto=precioAuto(x.lista);
+  const quien=exclusivo?'precio exclusivo':(modo==='Empleado'?'empleado':'obrero');
+  if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
+  else if(Math.abs(x.p-auto)<0.005)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % automático ('+quien+')</span>. Si hace falta, puede escribir otro precio.';
+  else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span> escrito a mano (el automático es '+S(auto)+').';
+  else n.innerHTML='Precio de lista '+S(x.lista)+' · sin descuento (el automático es '+S(auto)+').';
 }
 function agregar(){
-  const q=parseInt(document.getElementById('qcant').value)||0;
+  const n=totTallas();
   const x=precioActual();
-  if(q<1){toast('Ponga la cantidad');return;}
+  if(n<1){toast('Marque la talla y cuántas');return;}
   if(!(x.lista>0)){toast('Ese tipo de prenda no tiene precio',true);return;}
   if(!(x.p>0)){toast('Escriba el precio a cobrar');return;}
   if(x.p>x.lista){toast('No se puede cobrar más que el precio de lista',true);return;}
-  const p=x.p;
-  const ex=CART.find(function(y){return llave(y)===llave(sel)&&y.precio===p;});
-  if(ex)ex.q+=q;else CART.push({ma:sel.ma,ca:sel.ca,es:sel.es,co:sel.co,ta:sel.ta,q:q,precio:p,lista:x.lista});
-  sel={ma:null,ca:null,es:null,co:null,ta:null};
-  pintaPasos();pintaCart();toast('Agregado: '+q+' × '+ncat(c[0]));
+  const p=Math.round(x.p*100)/100;
+  TAL.forEach(function(t){
+    const q=TQ[t]||0;if(!q)return;
+    const l={ma:sel.ma,ca:sel.ca,es:sel.es,co:sel.co,ta:t};
+    const ex=CART.find(function(y){return llave(y)===llave(l)&&y.precio===p;});
+    if(ex)ex.q+=q;else{l.q=q;l.precio=p;l.lista=x.lista;CART.push(l);}
+  });
+  const nom=ncat(sel.ca);
+  /* Se quedan marca, tipo de prenda y estilo: para la siguiente prenda parecida
+     solo se elige el color y las tallas. "Empezar otra prenda desde cero" limpia todo. */
+  sel.co=null;sel.ta=null;TQ={};pMan=null;fcol='';
+  pintaPasos();pintaCart();toast('Agregado: '+n+' × '+nom);
+  const st=document.getElementById('st4');
+  if(st&&window.innerWidth<=900)st.scrollIntoView({behavior:'smooth',block:'start'});
+}
+/* Si cambian el tipo de cliente o el exclusivo con prendas ya en la venta,
+   todas pasan al precio automático nuevo (y se juntan las que quedan iguales). */
+function reprecioCart(){
+  if(!CART.length)return;
+  const out=[];
+  CART.forEach(function(x){
+    if(x.lista>0)x.precio=puedeRebajar()?precioAuto(x.lista):x.lista;
+    const ex=out.find(function(y){return llave(y)===llave(x)&&y.precio===x.precio;});
+    if(ex)ex.q+=x.q;else out.push(x);
+  });
+  CART=out;
 }
 function pintaCart(){
   const c=document.getElementById('citems');
@@ -2192,9 +2265,10 @@ function refrescaModo(){
     av.className='avisomodo '+(exclusivo?'exc':'col');
     const quien=(modo==='Publico')?'cliente del público':(modo==='Empleado'?'empleado':'obrero');
     av.textContent=exclusivo
-      ? ('Precio exclusivo para '+quien+': escriba el precio de cada prenda. Queda registrado el descuento.')
-      : ('Venta a '+quien+': puede escribir el precio de cada prenda.');
+      ? ('Precio exclusivo para '+quien+': 30 % de descuento automático en cada prenda.')
+      : ('Venta a '+quien+': 10 % de descuento automático en cada prenda.');
   }
+  pMan=null;reprecioCart();
   pintaResumen();pintaCart();
 }
 async function guardarCli(){
@@ -2856,6 +2930,7 @@ async function quitar2(tipo,codigo,nombre){
     else if(tipo==='est')EST=EST.filter(function(e){return e[0]!==codigo;});
     else TAL=TAL.filter(function(t){return t!==codigo;});
     ['ca','co','ma','es','ta'].forEach(function(k){if(sel[k]===codigo)sel[k]=null;});
+    delete TQ[codigo];
     reindex();pintaPasos();pintaExistentes();
     marcaEstado(true,'Conectado');
     toast(r.mensaje||'Quitado');
@@ -2974,7 +3049,7 @@ async function guardarAdd(){
     reindex();
     if(addVenta){
       if(addTipo==='cat')sel.ca=r.codigo;else if(addTipo==='col'){sel.co=r.codigo;fcol='';}
-      else if(addTipo==='mar')sel.ma=r.codigo;else if(addTipo==='est')sel.es=r.codigo;else sel.ta=r.codigo;
+      else if(addTipo==='mar')sel.ma=r.codigo;else if(addTipo==='est')sel.es=r.codigo;else TQ[r.codigo]=(TQ[r.codigo]||0)+1;
     }
     cerrarAdd();pintaPasos();llenaFiltros();toast('Agregado: '+v);
   }catch(e){toast('No se pudo guardar: '+e.message,true);}
