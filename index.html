@@ -809,6 +809,16 @@ padding:10px 8px 6px;min-height:40px;font-family:inherit;}
 width:32px;height:36px;font-family:inherit;}
 .tq .tqc span{font-size:16px;font-weight:700;min-width:20px;text-align:center;color:#33413D;}
 .tq:not(.on) .tqc span{color:var(--stone);font-weight:400;}
+.tqfila{border:1px solid var(--warm);border-radius:10px;padding:8px 10px 10px;margin-bottom:8px;background:var(--warm-light);}
+.tqfila.on{border-color:var(--sage);}
+.tqcol{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-weight:700;font-size:14px;color:#33413D;}
+.tqcol .sw{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
+.tqcol .tqcnt{margin-left:auto;font-size:12px;font-weight:700;color:var(--stone);}
+.tqfila.on .tqcnt{color:var(--sage-dark);}
+.tqvacio{color:var(--stone);font-size:13.5px;padding:6px 0;}
+@media(max-width:600px){.tqfila .tqs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+.tqfila .tq{min-width:0;}.tqfila .tq .tqn{padding:7px 4px 4px;min-height:32px;font-size:14.5px;}
+.tqfila .tq .tqc button{width:26px;height:32px;font-size:18px;}.tqfila .tq .tqc span{font-size:14.5px;min-width:14px;}}
 .nuevap{background:none;border:0;color:var(--sage-dark);font-weight:700;font-size:13.5px;cursor:pointer;
 text-decoration:underline;padding:6px 0;font-family:inherit;}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start;}
@@ -1636,7 +1646,7 @@ let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
 let modo='Publico',exclusivo=false,planilla=false,tokenVenta='';
 /* TQ = cantidad por talla de la prenda que se está marcando; pMan = precio escrito a mano (null = automático). */
-let TQ={},pMan=null;
+let TQ={},SCO=[],pMan=null;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
     addTipo=null,addVenta=0,fcol='',ocupado=false;
 
@@ -1869,40 +1879,65 @@ function pintaPasos(){
   H+=stepHTML(3,'Estilo',sel.es?nest(sel.es):'',
      '<div class="opts">'+EST.map(function(e){return optOne({v:e[0],l:e[1]},'es');}).join('')+
      '</div><div class="addop" onclick="abrirAdd(\'est\',1)">+ Estilo que no está</div>');
-  H+=stepHTML(4,'Color',sel.co?ncol(sel.co):'',
+  H+=stepHTML(4,SCO.length>1?'Colores ('+SCO.length+')':'Color · puede marcar varios',SCO.map(ncol).join(', '),
      '<div class="buscacol"><input id="bcol" type="search" placeholder="Escriba el color: ne, beig, azul…" '+
      'oninput="filtraColor(this.value)" value="'+fcol+'"><span style="font-size:12px;color:var(--stone)" id="ccolh"></span></div>'+
      '<div class="colgrid" id="optsCol"></div><div class="addop" onclick="abrirAdd(\'col\',1)">+ Color que no está</div>');
   H+=stepHTML(5,'Talla y cantidad',txtTallas(),
-     '<div class="tqs">'+TAL.map(tqHTML).join('')+
+     '<div class="tqwrap">'+tallasHTML()+
      '</div><div class="addop" onclick="abrirAdd(\'tal\',1)">+ Talla que no está</div>');
   document.getElementById('pasos').innerHTML=H;
   pintaCol();pintaResumen();
 }
-/* ===== Tallas con cantidad =====
-   Tocar la talla suma una prenda; − y + ajustan. Así 2 M + 1 L se marcan juntas
-   y entran al carrito con un solo "Agregar". */
-function totTallas(){let n=0;for(const k in TQ)n+=TQ[k];return n;}
+/* ===== Colores y tallas con cantidad =====
+   Se pueden marcar varios colores a la vez (SCO, en el orden en que se tocaron);
+   cada color lleva su fila de tallas con − y +. TQ[color][talla] = cantidad.
+   Así 2 M negro + 1 L blanco entran al carrito con un solo "Agregar" (24/11/2026). */
+function qCol(co){let n=0;const m=TQ[co]||{};for(const k in m)n+=m[k];return n;}
+function totTallas(){let n=0;SCO.forEach(function(co){n+=qCol(co);});return n;}
+function txtCol(co){
+  const m=TQ[co]||{};
+  return TAL.filter(function(t){return m[t]>0;}).map(function(t){return t+' ×'+m[t];}).join(' · ');
+}
 function txtTallas(){
-  const l=TAL.filter(function(t){return TQ[t]>0;});
-  return l.length?l.map(function(t){return t+' ×'+TQ[t];}).join(' · '):'';
+  const l=SCO.filter(function(co){return qCol(co)>0;});
+  if(!l.length)return '';
+  if(SCO.length===1)return txtCol(l[0]);
+  return l.map(function(co){return ncol(co)+': '+txtCol(co);}).join(' | ');
 }
-function tqHTML(t){
-  const q=TQ[t]||0,a=JSON.stringify(String(t)).replace(/"/g,'&quot;');
-  return '<div class="tq'+(q?' on':'')+'"><button type="button" class="tqn" onclick="sumaT('+a+',1)">'+t+'</button>'+
-    '<div class="tqc"><button type="button" onclick="sumaT('+a+',-1)" aria-label="Quitar una">−</button>'+
-    '<span>'+q+'</span><button type="button" onclick="sumaT('+a+',1)" aria-label="Sumar una">+</button></div></div>';
+function tqHTML(co,t){
+  const q=(TQ[co]||{})[t]||0,a=JSON.stringify(String(t)).replace(/"/g,'&quot;'),c=JSON.stringify(String(co)).replace(/"/g,'&quot;');
+  return '<div class="tq'+(q?' on':'')+'"><button type="button" class="tqn" onclick="sumaT('+c+','+a+',1)">'+t+'</button>'+
+    '<div class="tqc"><button type="button" onclick="sumaT('+c+','+a+',-1)" aria-label="Quitar una">−</button>'+
+    '<span>'+q+'</span><button type="button" onclick="sumaT('+c+','+a+',1)" aria-label="Sumar una">+</button></div></div>';
 }
-function sumaT(t,d){
-  const q=Math.max(0,(TQ[t]||0)+d);
-  if(q)TQ[t]=q;else delete TQ[t];
+function tallasHTML(){
+  if(!SCO.length)return '<div class="tqvacio">Primero marque uno o más colores.</div>';
+  return SCO.map(function(co){
+    const c=NCOL[co],hex=c?c[2]:'#ccc',n=qCol(co);
+    return '<div class="tqfila'+(n?' on':'')+'"><div class="tqcol"><span class="sw" style="background:'+hex+'"></span>'+
+      '<span class="tqnom">'+ncol(co)+'</span><span class="tqcnt">'+(n?n+(n===1?' prenda':' prendas'):'sin tallas')+'</span></div>'+
+      '<div class="tqs">'+TAL.map(function(t){return tqHTML(co,t);}).join('')+'</div></div>';
+  }).join('');
+}
+function sumaT(co,t,d){
+  const m=TQ[co]||(TQ[co]={});
+  const q=Math.max(0,(m[t]||0)+d);
+  if(q)m[t]=q;else delete m[t];
   const st=document.getElementById('st5');
   if(st){
-    st.querySelector('.tqs').innerHTML=TAL.map(tqHTML).join('');
+    st.querySelector('.tqwrap').innerHTML=tallasHTML();
     st.className='step'+(totTallas()?' done':'');
     st.querySelector('.stepv').textContent=txtTallas();
   }
   pintaResumen();
+}
+function togCol(co){
+  const i=SCO.indexOf(co);
+  if(i>=0){SCO.splice(i,1);delete TQ[co];}else SCO.push(co);
+  const foco=document.activeElement&&document.activeElement.id==='bcol';
+  pintaPasos();
+  if(foco){const b=document.getElementById('bcol');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length);}}
 }
 /* Descuento automático: Empleado u Obrero 10 %; Precio exclusivo 30 % (reemplaza
    al 10 %, no se suman; vale también para Público). Decisión de Christian, 23/11/2026,
@@ -1910,7 +1945,7 @@ function sumaT(t,d){
    nunca mayor al de lista. */
 function pctAuto(){return exclusivo?30:(modo!=='Publico'?10:0);}
 function precioAuto(lista){return Math.round(lista*(100-pctAuto()))/100;}
-function prendaNueva(){sel={ma:null,ca:null,es:null,co:null,ta:null};TQ={};pMan=null;fcol='';pintaPasos();}
+function prendaNueva(){sel={ma:null,ca:null,es:null,co:null,ta:null};TQ={};SCO=[];pMan=null;fcol='';pintaPasos();}
 /* Ordena los colores por tono: primero los neutros de claro a oscuro,
    después los de color siguiendo el arcoíris. Así los parecidos quedan
    juntos y el ojo los encuentra sin leer. Funciona también con los
@@ -1936,7 +1971,7 @@ function ordenaColores(l){
   return {neu:neu.map(function(x){return x[0];}),cro:cro.map(function(x){return x[0];})};
 }
 function colHTML(c){
-  return '<div class="colop'+(sel.co===c[0]?' sel':'')+'" onclick="pick(\'co\',\''+c[0]+'\')" title="'+c[1]+'">'+
+  return '<div class="colop'+(SCO.indexOf(c[0])>=0?' sel':'')+'" onclick="togCol(\''+c[0]+'\')" title="'+c[1]+'">'+
     '<div class="mu" style="background:'+c[2]+'"></div><span class="nb">'+c[1]+'</span></div>';
 }
 function pintaCol(){
@@ -1965,9 +2000,10 @@ function pick(k,v){
 }
 function pintaResumen(){
   const r=document.getElementById('resumen');
-  const algo=sel.ma||sel.ca||sel.es||sel.co||totTallas();
+  const algo=sel.ma||sel.ca||sel.es||SCO.length||totTallas();
   const nueva=algo?'<button type="button" class="nuevap" onclick="prendaNueva()">Empezar otra prenda desde cero</button>':'';
-  const falta=['ma','ca','es','co'].filter(function(k){return !sel[k];});
+  const falta=['ma','ca','es'].filter(function(k){return !sel[k];});
+  if(!SCO.length)falta.push('co');
   if(!totTallas())falta.push('ta');
   if(falta.length){
     const nom={ma:'la marca',ca:'el tipo de prenda',es:'el estilo',co:'el color',ta:'la talla y cuántas'};
@@ -1978,8 +2014,10 @@ function pintaResumen(){
   const campoPrecio=libre
     ? '<div class="fg"><label>Precio c/u</label><input id="qprec" type="number" min="0" step="0.5" value="'+(pre?x.p:'')+'" oninput="pMan=parseFloat(this.value);calcTot()"></div>'
     : '<div class="fg"><label>Precio c/u</label><div class="fijo">'+(pre?S(pre):'sin precio')+'</div></div>';
-  r.innerHTML='<div class="rline">'+ncat(sel.ca)+' · '+nest(sel.es)+' · '+ncol(sel.co)+' · '+nmar(sel.ma)+'</div>'+
-    '<div class="rsku">Tallas: '+txtTallas()+' · el código LT se asigna solo al cobrar</div>'+
+  const conQ=SCO.filter(function(co){return qCol(co)>0;}),sinQ=SCO.filter(function(co){return !qCol(co);});
+  r.innerHTML='<div class="rline">'+ncat(sel.ca)+' · '+nest(sel.es)+' · '+(conQ.length===1?ncol(conQ[0]):conQ.length+' colores')+' · '+nmar(sel.ma)+'</div>'+
+    '<div class="rsku">'+(conQ.length===1?'Tallas: ':'')+txtTallas()+' · el código LT se asigna solo al cobrar</div>'+
+    (sinQ.length?'<div class="rsku" style="color:var(--taupe);font-weight:700">Sin tallas marcadas (no se agrega): '+sinQ.map(ncol).join(', ')+'</div>':'')+
     '<div class="rrow">'+
     '<div class="fg"><label>Prendas</label><div class="fijo" style="color:var(--petrol)">'+n+'</div></div>'+
     campoPrecio+
@@ -2016,16 +2054,16 @@ function agregar(){
   if(!(x.p>0)){toast('Escriba el precio a cobrar');return;}
   if(x.p>x.lista){toast('No se puede cobrar más que el precio de lista',true);return;}
   const p=Math.round(x.p*100)/100;
-  TAL.forEach(function(t){
-    const q=TQ[t]||0;if(!q)return;
-    const l={ma:sel.ma,ca:sel.ca,es:sel.es,co:sel.co,ta:t};
+  SCO.forEach(function(co){TAL.forEach(function(t){
+    const q=(TQ[co]||{})[t]||0;if(!q)return;
+    const l={ma:sel.ma,ca:sel.ca,es:sel.es,co:co,ta:t};
     const ex=CART.find(function(y){return llave(y)===llave(l)&&y.precio===p;});
     if(ex)ex.q+=q;else{l.q=q;l.precio=p;l.lista=x.lista;CART.push(l);}
-  });
+  });});
   const nom=ncat(sel.ca);
   /* Se quedan marca, tipo de prenda y estilo: para la siguiente prenda parecida
-     solo se elige el color y las tallas. "Empezar otra prenda desde cero" limpia todo. */
-  sel.co=null;sel.ta=null;TQ={};pMan=null;fcol='';
+     solo se eligen los colores y las tallas. "Empezar otra prenda desde cero" limpia todo. */
+  sel.co=null;sel.ta=null;TQ={};SCO=[];pMan=null;fcol='';
   pintaPasos();pintaCart();toast('Agregado: '+n+' × '+nom);
   const st=document.getElementById('st4');
   if(st&&window.innerWidth<=900)st.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3048,8 +3086,9 @@ async function guardarAdd(){
     else TAL.push(r.codigo);
     reindex();
     if(addVenta){
-      if(addTipo==='cat')sel.ca=r.codigo;else if(addTipo==='col'){sel.co=r.codigo;fcol='';}
-      else if(addTipo==='mar')sel.ma=r.codigo;else if(addTipo==='est')sel.es=r.codigo;else TQ[r.codigo]=(TQ[r.codigo]||0)+1;
+      if(addTipo==='cat')sel.ca=r.codigo;else if(addTipo==='col'){if(SCO.indexOf(r.codigo)<0)SCO.push(r.codigo);fcol='';}
+      else if(addTipo==='mar')sel.ma=r.codigo;else if(addTipo==='est')sel.es=r.codigo;
+      else if(SCO.length){const co=SCO[SCO.length-1],m=TQ[co]||(TQ[co]={});m[r.codigo]=(m[r.codigo]||0)+1;}
     }
     cerrarAdd();pintaPasos();llenaFiltros();toast('Agregado: '+v);
   }catch(e){toast('No se pudo guardar: '+e.message,true);}
