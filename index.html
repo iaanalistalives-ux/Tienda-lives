@@ -1952,9 +1952,8 @@ function togCol(co){
 /* Descuentos por interruptor (decisión de Christian, 24/11/2026; antes el 10 % salía
    solo al elegir Empleado u Obrero): "Precio preferencial" 10 % y "Precio exclusivo"
    30 %, los dos para cualquiera de los tres tipos de cliente. No se suman: al prender
-   uno se apaga el otro. Sin interruptor se cobra el precio de lista. Con un interruptor
-   prendido, o si es Empleado u Obrero, se puede además escribir otro precio, nunca
-   mayor al de lista. La venta viaja con "preferencial" para que la base acepte el
+   uno se apaga el otro. Sin interruptor se cobra el precio de lista. Solo valen los
+   interruptores: el precio ya no se escribe a mano al vender (sí en Corregir). La venta viaja con "preferencial" para que la base acepte el
    precio rebajado también al Público (la variable se sigue llamando colab). */
 function pctAuto(){return exclusivo?30:(colab?10:0);}
 function precioAuto(lista){return Math.round(lista*(100-pctAuto()))/100;}
@@ -2023,10 +2022,9 @@ function pintaResumen(){
     r.innerHTML='<div style="color:var(--stone);font-size:14px">Falta marcar: <b>'+falta.map(function(k){return nom[k];}).join(', ')+'</b></div>'+nueva;
     return;
   }
-  const x=precioActual(),pre=x.lista,libre=puedeRebajar(),n=totTallas();
-  const campoPrecio=libre
-    ? '<div class="fg"><label>Precio c/u</label><input id="qprec" type="number" min="0" step="0.5" value="'+(pre?x.p:'')+'" oninput="pMan=parseFloat(this.value);calcTot()"></div>'
-    : '<div class="fg"><label>Precio c/u</label><div class="fijo">'+(pre?S(pre):'sin precio')+'</div></div>';
+  const x=precioActual(),pre=x.lista,n=totTallas();
+  /* Solo valen los interruptores (decisión de Christian, 24/11/2026): el precio ya no se escribe a mano. */
+  const campoPrecio='<div class="fg"><label>Precio c/u</label><div class="fijo">'+(pre?((x.p<pre?'<span class="tach" style="font-size:14px;font-weight:400">'+S(pre)+'</span> ':'')+S(x.p)):'sin precio')+'</div></div>';
   const conQ=SCO.filter(function(co){return qCol(co)>0;}),sinQ=SCO.filter(function(co){return !qCol(co);});
   r.innerHTML='<div class="rline">'+ncat(sel.ca)+' · '+nest(sel.es)+' · '+(conQ.length===1?ncol(conQ[0]):conQ.length+' colores')+' · '+nmar(sel.ma)+'</div>'+
     '<div class="rsku">'+(conQ.length===1?'Tallas: ':'')+txtTallas()+' · el código LT se asigna solo al cobrar</div>'+
@@ -2043,27 +2041,16 @@ function pintaResumen(){
 }
 function precioActual(){
   const c=NCAT[sel.ca],lista=c?c[2]:0;
-  if(!puedeRebajar())return {p:lista,lista:lista};
-  return {p:(pMan!==null&&!isNaN(pMan))?pMan:precioAuto(lista),lista:lista};
+  return {p:precioAuto(lista),lista:lista};
 }
 function calcTot(){
   const x=precioActual();
   const t=document.getElementById('qtot');if(t)t.textContent=S(totTallas()*x.p);
   const n=document.getElementById('qnota');
   if(!n||!(x.lista>0))return;
-  if(!puedeRebajar()){n.innerHTML='Precio de lista, sin descuento. Para el 10 % active <b>Precio preferencial</b>.';return;}
-  const pa=pctAuto(),auto=precioAuto(x.lista);
-  const quien=exclusivo?'precio exclusivo':'precio preferencial';
-  if(!pa){
-    if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
-    else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span> escrito a mano.';
-    else n.innerHTML='Precio de lista, sin descuento. Para el 10 % active <b>Precio preferencial</b>.';
-    return;
-  }
-  if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
-  else if(Math.abs(x.p-auto)<0.005)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % ('+quien+')</span>. Si hace falta, puede escribir otro precio.';
-  else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span> escrito a mano (el automático es '+S(auto)+').';
-  else n.innerHTML='Precio de lista '+S(x.lista)+' · sin descuento (el automático es '+S(auto)+').';
+  const pa=pctAuto();
+  if(pa)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % ('+(exclusivo?'precio exclusivo':'precio preferencial')+')</span>.';
+  else n.innerHTML='Precio de lista, sin descuento. Para descontar active <b>Precio preferencial</b> (10 %) o <b>Precio exclusivo</b> (30 %).';
 }
 function agregar(){
   const n=totTallas();
@@ -2093,7 +2080,7 @@ function reprecioCart(){
   if(!CART.length)return;
   const out=[];
   CART.forEach(function(x){
-    if(x.lista>0)x.precio=puedeRebajar()?precioAuto(x.lista):x.lista;
+    if(x.lista>0)x.precio=precioAuto(x.lista);
     const ex=out.find(function(y){return llave(y)===llave(x)&&y.precio===x.precio;});
     if(ex)ex.q+=x.q;else out.push(x);
   });
