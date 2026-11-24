@@ -1065,13 +1065,18 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
               <div class="ph">Se elige antes de marcar la prenda. Son las mismas categorías del dashboard.</div>
               <div class="modos" id="modos">
                 <button class="on" onclick="setModo('Publico')">Público<br><span style="font-weight:400;font-size:11px">cliente externo</span></button>
-                <button onclick="setModo('Empleado')">Empleado<br><span style="font-weight:400;font-size:11px">personal administrativo · 10 %</span></button>
-                <button onclick="setModo('Obrero')">Obrero<br><span style="font-weight:400;font-size:11px">personal de planta · 10 %</span></button>
+                <button onclick="setModo('Empleado')">Empleado<br><span style="font-weight:400;font-size:11px">personal administrativo</span></button>
+                <button onclick="setModo('Obrero')">Obrero<br><span style="font-weight:400;font-size:11px">personal de planta</span></button>
+              </div>
+              <div class="exclu" id="colab" onclick="toggleColab()" style="display:none">
+                <div class="sw2"><span></span></div>
+                <div><div class="t1">Precio Colaborador</div>
+                <div class="t2">10 % de descuento en cada prenda. Solo para Empleado u Obrero.</div></div>
               </div>
               <div class="exclu" id="exclu" onclick="toggleExclusivo()">
                 <div class="sw2"><span></span></div>
                 <div><div class="t1">Precio exclusivo</div>
-                <div class="t2">30 % de descuento, en lugar del 10 %. Se puede activar para cualquiera de los tres.</div></div>
+                <div class="t2">30 % de descuento. Se puede activar para cualquiera de los tres.</div></div>
               </div>
               <div class="exclu pla" id="planilla" onclick="togglePlanilla()" style="display:none">
                 <div class="sw2"><span></span></div>
@@ -1649,7 +1654,7 @@ function pedirVendedora(falta){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico',exclusivo=false,planilla=false,tokenVenta='';
+let modo='Publico',exclusivo=false,colab=false,planilla=false,tokenVenta='';
 /* TQ = cantidad por talla de la prenda que se está marcando; pMan = precio escrito a mano (null = automático). */
 let TQ={},SCO=[],pMan=null;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
@@ -1944,11 +1949,13 @@ function togCol(co){
   pintaPasos();
   if(foco){const b=document.getElementById('bcol');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length);}}
 }
-/* Descuento automático: Empleado u Obrero 10 %; Precio exclusivo 30 % (reemplaza
-   al 10 %, no se suman; vale también para Público). Decisión de Christian, 23/11/2026,
-   igual a lo que ya se cobraba a mano. La vendedora puede escribir otro precio,
-   nunca mayor al de lista. */
-function pctAuto(){return exclusivo?30:(modo!=='Publico'?10:0);}
+/* Descuentos por interruptor (decisión de Christian, 24/11/2026; antes el 10 % salía
+   solo al elegir Empleado u Obrero): "Precio Colaborador" 10 % (solo Empleado u Obrero,
+   porque la base cobra precio de lista al Público sin exclusivo) y "Precio exclusivo"
+   30 % (cualquiera de los tres). No se suman: al prender uno se apaga el otro.
+   Sin interruptor se cobra el precio de lista. Empleado u Obrero pueden además
+   escribir otro precio, nunca mayor al de lista. */
+function pctAuto(){return exclusivo?30:((colab&&modo!=='Publico')?10:0);}
 function precioAuto(lista){return Math.round(lista*(100-pctAuto()))/100;}
 function prendaNueva(){sel={ma:null,ca:null,es:null,co:null,ta:null};TQ={};SCO=[];pMan=null;fcol='';pintaPasos();}
 /* Ordena los colores por tono: primero los neutros de claro a oscuro,
@@ -2045,9 +2052,15 @@ function calcTot(){
   if(!n||!(x.lista>0))return;
   if(!puedeRebajar()){n.innerHTML='Precio de lista. Sin descuento para público.';return;}
   const pa=pctAuto(),auto=precioAuto(x.lista);
-  const quien=exclusivo?'precio exclusivo':(modo==='Empleado'?'empleado':'obrero');
+  const quien=exclusivo?'precio exclusivo':'precio colaborador';
+  if(!pa){
+    if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
+    else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span> escrito a mano.';
+    else n.innerHTML='Precio de lista, sin descuento. Para el 10 % active <b>Precio Colaborador</b>.';
+    return;
+  }
   if(x.p>x.lista)n.innerHTML='<span style="color:var(--rose);font-weight:700">No se puede cobrar más que el precio de lista ('+S(x.lista)+').</span>';
-  else if(Math.abs(x.p-auto)<0.005)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % automático ('+quien+')</span>. Si hace falta, puede escribir otro precio.';
+  else if(Math.abs(x.p-auto)<0.005)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % ('+quien+')</span>. Si hace falta, puede escribir otro precio.';
   else if(x.p<x.lista)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+((x.lista-x.p)/x.lista*100).toFixed(0)+'%</span> escrito a mano (el automático es '+S(auto)+').';
   else n.innerHTML='Precio de lista '+S(x.lista)+' · sin descuento (el automático es '+S(auto)+').';
 }
@@ -2347,6 +2360,7 @@ async function cobrar(){
     CART=[];alerta('');tokenVenta='';
     pintaCart();pintaHoy();
     exclusivo=false;document.getElementById('exclu').className='exclu';
+    colab=false;document.getElementById('colab').className='exclu';
     planilla=false;document.getElementById('planilla').className='exclu pla';
     limpiaCliVenta();
     setModo('Publico');       /* nada se queda pegado para el próximo cliente */
@@ -2494,9 +2508,10 @@ function setModo(m){
     b.className=(['Publico','Empleado','Obrero'][i]===m)?'on':'';
   });
   /* La planilla solo existe para el personal: al pasar a Público se apaga. */
-  const pl=document.getElementById('planilla');
-  if(m==='Publico'){planilla=false;pl.className='exclu pla';pl.style.display='none';}
-  else pl.style.display='';
+  const pl=document.getElementById('planilla'),co=document.getElementById('colab');
+  if(m==='Publico'){planilla=false;pl.className='exclu pla';pl.style.display='none';
+                    colab=false;co.className='exclu';co.style.display='none';}
+  else{pl.style.display='';co.style.display='';}
   refrescaModo();
 }
 function togglePlanilla(){
@@ -2504,8 +2519,18 @@ function togglePlanilla(){
   document.getElementById('planilla').className='exclu pla'+(planilla?' on':'');
   refrescaModo();
 }
+function toggleColab(){
+  if(modo==='Publico')return;
+  colab=!colab;
+  if(colab)exclusivo=false;
+  document.getElementById('colab').className='exclu'+(colab?' on':'');
+  document.getElementById('exclu').className='exclu'+(exclusivo?' on':'');
+  refrescaModo();
+}
 function toggleExclusivo(){
   exclusivo=!exclusivo;
+  if(exclusivo)colab=false;
+  document.getElementById('colab').className='exclu'+(colab?' on':'');
   document.getElementById('exclu').className='exclu'+(exclusivo?' on':'');
   refrescaModo();
 }
@@ -2514,14 +2539,14 @@ function refrescaModo(){
   if(fp)fp.style.display=planilla?'none':'';
   if(ap)ap.style.display=planilla?'':'none';
   const av=document.getElementById('avisoModo');
-  if(!puedeRebajar()){av.style.display='none';}
+  if(!pctAuto()){av.style.display='none';}
   else{
     av.style.display='';
     av.className='avisomodo '+(exclusivo?'exc':'col');
     const quien=(modo==='Publico')?'cliente del público':(modo==='Empleado'?'empleado':'obrero');
     av.textContent=exclusivo
-      ? ('Precio exclusivo para '+quien+': 30 % de descuento automático en cada prenda.')
-      : ('Venta a '+quien+': 10 % de descuento automático en cada prenda.');
+      ? ('Precio exclusivo para '+quien+': 30 % de descuento en cada prenda.')
+      : ('Precio Colaborador para '+quien+': 10 % de descuento en cada prenda.');
   }
   pMan=null;reprecioCart();
   pintaResumen();pintaCart();
