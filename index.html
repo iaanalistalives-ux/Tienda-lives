@@ -2078,11 +2078,13 @@ function agregar(){
   if(!(x.p>0)){toast('Escriba el precio a cobrar');return;}
   if(x.p>x.lista){toast('No se puede cobrar más que el precio de lista',true);return;}
   const p=Math.round(x.p*100)/100;
+  /* Cada prenda guarda el descuento con el que entró (d): camp, exc, pref o ninguno. */
+  const d=campana?'camp':(exclusivo?'exc':(colab?'pref':''));
   SCO.forEach(function(co){TAL.forEach(function(t){
     const q=(TQ[co]||{})[t]||0;if(!q)return;
     const l={ma:sel.ma,ca:sel.ca,es:sel.es,co:co,ta:t};
-    const ex=CART.find(function(y){return llave(y)===llave(l)&&y.precio===p;});
-    if(ex)ex.q+=q;else{l.q=q;l.precio=p;l.lista=x.lista;CART.push(l);}
+    const ex=CART.find(function(y){return llave(y)===llave(l)&&y.precio===p&&(y.d||'')===d;});
+    if(ex)ex.q+=q;else{l.q=q;l.precio=p;l.lista=x.lista;l.d=d;CART.push(l);}
   });});
   const nom=ncat(sel.ca);
   /* Se quedan marca, tipo de prenda y estilo: para la siguiente prenda parecida
@@ -2092,18 +2094,10 @@ function agregar(){
   const st=document.getElementById('st4');
   if(st&&window.innerWidth<=900)st.scrollIntoView({behavior:'smooth',block:'start'});
 }
-/* Si cambian el tipo de cliente o el exclusivo con prendas ya en la venta,
-   todas pasan al precio automático nuevo (y se juntan las que quedan iguales). */
-function reprecioCart(){
-  if(!CART.length)return;
-  const out=[];
-  CART.forEach(function(x){
-    if(x.lista>0)x.precio=precioAuto(x.lista);
-    const ex=out.find(function(y){return llave(y)===llave(x)&&y.precio===x.precio;});
-    if(ex)ex.q+=x.q;else out.push(x);
-  });
-  CART=out;
-}
+/* Lo ya agregado a la venta NO cambia de precio (decisión de Christian, 27/11/2026):
+   cada prenda se queda con el descuento que tenía al agregarla, aunque después cambien
+   el interruptor o el tipo de cliente. Así una misma venta puede llevar prendas al
+   30 % y al 50 %. Para cambiarle el descuento a una prenda: quitarla y agregarla otra vez. */
 function pintaCart(){
   const c=document.getElementById('citems');
   if(!CART.length)c.innerHTML='<div class="empty">Todavía no agrega prendas</div>';
@@ -2344,23 +2338,28 @@ async function cobrar(){
   /* Un token por intento: si hay que reintentar, va el mismo y el servidor
      reconoce que ya la grabó en vez de duplicarla. */
   if(!tokenVenta)tokenVenta='V'+Date.now()+'-'+Math.floor(Math.random()*10000);
-  const items=CART.map(function(x){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio};});
+  const items=CART.map(function(x){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,d:x.d||''};});
   const total=CART.reduce(function(a,x){return a+x.q*x.precio;},0);
   const unid=CART.reduce(function(a,x){return a+x.q;},0);
+  /* Los avisos de la venta salen de las prendas del carrito, no del interruptor que esté
+     prendido al cobrar: una venta puede llevar prendas con descuentos distintos. */
+  const hayExc=CART.some(function(x){return x.d==='exc';});
+  const hayCamp=CART.some(function(x){return x.d==='camp';});
+  const hayRebaja=CART.some(function(x){return x.lista>0&&x.precio<x.lista;});
   try{
     const pagoUsado=planilla?'Descuento por planilla':document.getElementById('pago').value;
     const r=await api({action:'venta',token:tokenVenta,items:items,pago:pagoUsado,
                        usuario:document.getElementById('usuario').value,
-                       tipo:modo,exclusivo:exclusivo,preferencial:(colab||campana),campana:campana,
+                       tipo:modo,exclusivo:hayExc,preferencial:hayRebaja,campana:hayCamp,
                        cliente:vCli('vNom'),dni:vCli('vDni'),celular:vCli('vCel'),correo:vCli('vMail')});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
     CART.forEach(function(x){
       VENTAS.push({f:f,sku:'',ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:x.precio,
-                   pago:pagoUsado,h:r.hora||'',tk:r.ticket||'',camp:campana?'SI':'NO',_i:1e9});
+                   pago:pagoUsado,h:r.hora||'',tk:r.ticket||'',camp:hayCamp?'SI':'NO',_i:1e9});
     });
     if(FECHAS.indexOf(f)<0){FECHAS.push(f);FECHAS.sort();}
-    HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:exclusivo,camp:campana,
+    HOY.unshift({tk:r.ticket||'',h:r.hora||'',u:unid,t:r.total||total,modo:modo,exc:hayExc,camp:hayCamp,
       pago:pagoUsado,cli:vCli('vNom'),dni:vCli('vDni'),cel:vCli('vCel'),mail:vCli('vMail'),vend:vendedora(),
       lineas:items.map(function(x,i){return {ma:x.ma,ca:x.ca,es:x.es,co:x.co,ta:x.ta,q:x.q,p:CART[i]?CART[i].precio:0,lista:CART[i]?CART[i].lista:0};})});
     CART=[];alerta('');tokenVenta='';
@@ -2560,12 +2559,12 @@ function refrescaModo(){
     av.className='avisomodo '+((exclusivo||campana)?'exc':'col');
     const quien=(modo==='Publico')?'cliente del público':(modo==='Empleado'?'empleado':'obrero');
     av.textContent=campana
-      ? ('Precio de campaña para '+quien+': 50 % de descuento en cada prenda.')
+      ? ('Precio de campaña para '+quien+': 50 % de descuento en las prendas que agregue ahora.')
       : exclusivo
-      ? ('Precio exclusivo para '+quien+': 30 % de descuento en cada prenda.')
-      : ('Precio preferencial para '+quien+': 10 % de descuento en cada prenda.');
+      ? ('Precio exclusivo para '+quien+': 30 % de descuento en las prendas que agregue ahora.')
+      : ('Precio preferencial para '+quien+': 10 % de descuento en las prendas que agregue ahora.');
   }
-  pMan=null;reprecioCart();
+  pMan=null;
   pintaResumen();pintaCart();
 }
 async function guardarCli(){
