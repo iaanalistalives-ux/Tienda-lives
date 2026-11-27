@@ -1961,7 +1961,14 @@ function finMes(a,m){const d=new Date(Date.UTC(+a,+m,0));return d.toISOString().
    hasta el último día del mes anterior; el mes en curso, que apenas empieza, no se compara.
    Elegir un mes o escribir fechas a mano sí muestra lo que se pida. Los años anteriores
    salen completos. TOPE guarda la fecha de corte vigente ('' si no se recortó nada). */
-let TOPE='';
+let TOPE='',TOPE_D2='';
+/* Tendencia por mes (27/11/2026): el gráfico "Ingresos en el tiempo" agrupado por mes sí
+   incluye el mes en curso, aunque el resto del tablero llegue al último mes cerrado.
+   Año contra año no cambia. */
+function fechasTend(fechas){
+  if(gran!=='mes'||!TOPE)return FECHAS;
+  return FECHAS.concat(fechas.filter(function(f){return f>TOPE&&(!TOPE_D2||f<=TOPE_D2);}));
+}
 function cierreMes(){const d=new Date();d.setDate(0);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function rangoSel(){
   const a=document.getElementById('fd1').value||'',b=document.getElementById('fd2').value||'';
@@ -1969,8 +1976,8 @@ function rangoSel(){
   const ya=document.getElementById('fAnio').value,ym=document.getElementById('fMes').value;
   const auto=(!ya&&!a&&!b)||(ya&&!ym);
   const c=cierreMes();
-  TOPE='';
-  if(auto&&(!r.d2||r.d2>c)){r.d2=c;TOPE=c;}
+  TOPE='';TOPE_D2='';
+  if(auto&&(!r.d2||r.d2>c)){TOPE_D2=r.d2;r.d2=c;TOPE=c;}
   return r;
 }
 function filtroAnioMes(){
@@ -2079,12 +2086,14 @@ function pintaDash(){
     kpi('Venta promedio por día',S(dias?ing/dias:0),'','solo días con al menos una venta',dias?ing/dias:0,2,'S/ ');
   /* ==== gráfico principal ==== */
   pintaBotonesGran(FECHAS.length);
-  const G=agrupaM(M,FECHAS);
+  const FT=fechasTend(fechas),enCurso=FT.length>FECHAS.length;
+  const G=agrupaM(M,FT);
   let mx1=-1,mi1=0;G.val.forEach(function(v,i){if(v>mx1){mx1=v;mi1=i;}});
   document.getElementById('mejorPer').innerHTML=G.val.length?
-    ('Suma de precio × cantidad, '+textoPeriodo(FECHAS[0],FECHAS[FECHAS.length-1])+', agrupada por '+G.nom+
+    ('Suma de precio × cantidad, '+textoPeriodo(FT[0],FT[FT.length-1])+', agrupada por '+G.nom+
      '. El mejor '+G.nom+' fue <b>'+G.labTxt[mi1]+'</b> con '+S(mx1)+
-     (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')):'Sin datos.';
+     (G.val.length>1?', frente a un promedio de '+S(G.val.reduce(function(a,b){return a+b;},0)/G.val.length)+' por '+G.nom+'.':'.')+
+     (enCurso?' El último mes está en curso: va hasta el '+ddmmaa(FT[FT.length-1])+'.':'')):'Sin datos.';
   animaKpis('kdash');
   drawSpark('sp1',serie);
   /* Una tendencia se lee en línea; solo la comparación entre años va en barras,
@@ -2098,10 +2107,19 @@ function pintaDash(){
         scales:{y:{beginAtZero:true,ticks:{callback:Smil}},
         x:{ticks:{autoSkip:G.val.length>30,maxRotation:0,minRotation:0,font:{size:11}}}}}});
   }else{
-    draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,
+    /* por mes, cada punto lleva su valor en soles; en celular, si no caben, salen al tocar la línea */
+    const etq=gran==='mes',ancho=window.innerWidth>700,nU=G.val.length-1;
+    /* En PC el último mes va en una serie aparte de un solo punto: así su etiqueta se
+       coloca primero y nunca queda tapada por las de los meses vecinos. */
+    const dsU=(etq&&ancho&&nU>0)?[{data:G.val.map(function(v,i){return i===nU?v:null;}),showLine:false,borderColor:'#0F7A5A',borderWidth:4,
+      lsColEtq:'#0E3B36',pointRadius:4,pointHoverRadius:6,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',pointBorderWidth:1.2}]:[];
+    const fmtE=function(v,di,i){return (dsU.length&&di===0&&i===nU)?'':lsEtqAnual.soles(v);};
+    draw('c1',{type:'line',data:{labels:G.lab,datasets:[{data:G.val,borderColor:'#0F7A5A',borderWidth:2.5,tension:.3,lsColEtq:'#0E3B36',
       pointRadius:G.val.length>40?0:3,pointBackgroundColor:'#0F7A5A',pointBorderColor:'#fff',fill:true,
-      backgroundColor:function(c){const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(15,122,90,.18)');g.addColorStop(1,'rgba(15,122,90,0)');return g;}}]},
-      options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
+      backgroundColor:function(c){const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(15,122,90,.18)');g.addColorStop(1,'rgba(15,122,90,0)');return g;}}].concat(dsU)},
+      plugins:etq?[lsEtqAnual]:[],
+      options:{layout:{padding:{top:etq?24:0,right:etq?14:0}},
+        plugins:{legend:{display:false},lsEtqAnual:{display:etq,fmt:fmtE,modo:(ancho?'ver':undefined)},tooltip:{filter:function(it){return it.datasetIndex===0;},callbacks:{title:function(x){return G.labTxt[x[0].dataIndex];}}}},
         scales:{y:{beginAtZero:true,ticks:{callback:Smil}},
         x:{ticks:{maxTicksLimit:12,maxRotation:0,minRotation:0}}}}});
   }
@@ -2161,6 +2179,21 @@ function ventanaAnual(d1,d2){
   if(d1.slice(5)>d2.slice(5))return null;
   return {a:d1.slice(5),b:d2.slice(5)};
 }
+/* Líneas de Año contra año (27/11/2026): el gráfico sí incluye el mes en curso; la tabla
+   resumen de abajo y la estacionalidad siguen hasta el último mes cerrado. Devuelve los
+   ingresos por mes del gráfico, su ventana de días y hasta qué día llega ('' si no hay
+   mes en curso que agregar). */
+function mesesAAGraf(M,d1,d2){
+  let fin='';
+  if(TOPE)Object.keys(M).forEach(function(f){if(f>TOPE&&(!TOPE_D2||f<=TOPE_D2)&&f>fin)fin=f;});
+  const w=ventanaAnual(d1,fin||d2),mes={};
+  Object.keys(M).forEach(function(f){
+    if(fin?f>fin:(TOPE&&f>TOPE))return;
+    if(w&&(f.slice(5)<w.a||f.slice(5)>w.b))return;
+    const k=f.slice(0,7);mes[k]=(mes[k]||0)+M[f].i;
+  });
+  return {w:w,mes:mes,fin:fin};
+}
 function pintaAnioAnio(M,d1,d2,marca){
   /* Cada año se mide en la MISMA ventana de días que el filtro (por ejemplo del
      19/06 al 15/10 de cada año): comparar un año entero contra medio año no diría nada. */
@@ -2175,13 +2208,18 @@ function pintaAnioAnio(M,d1,d2,marca){
   });
   const anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
   const meses=[];for(let k=m1;k<=m2;k++)meses.push(('0'+k).slice(-2));
-  const labels=meses.map(function(k){return MES[parseInt(k,10)-1].slice(0,3);});
+  /* el gráfico usa sus propios meses: llega al mes en curso */
+  const GA=mesesAAGraf(M,d1,d2),wG=GA.w;
+  const g1=wG?parseInt(wG.a.slice(0,2),10):1,g2=wG?parseInt(wG.b.slice(0,2),10):12;
+  const mesesG=[];for(let k=g1;k<=g2;k++)mesesG.push(('0'+k).slice(-2));
+  const aniosG=Array.from(new Set(Object.keys(GA.mes).map(function(k){return k.slice(0,4);}))).sort();
+  const labels=mesesG.map(function(k){return MES[parseInt(k,10)-1].slice(0,3);});
   /* Comparativo anual en líneas (12/10/2026): una línea por año, eje enero–diciembre,
      etiqueta en soles en cada punto de cada año. Mes sin ventas = hueco, no cero. */
-  const COLA=lsEtqAnual.colores(anios);
-  const ds=anios.map(function(a,i){
-    return lsEtqAnual.serie(a,meses.map(function(kk){
-      const key=a+'-'+kk;return mes[key]?mes[key].i:null;}),i===anios.length-1,COLA[a]);
+  const COLA=lsEtqAnual.colores(aniosG);
+  const ds=aniosG.map(function(a,i){
+    return lsEtqAnual.serie(a,mesesG.map(function(kk){
+      const key=a+'-'+kk;return (key in GA.mes)?GA.mes[key]:null;}),i===aniosG.length-1,COLA[a]);
   });
   draw('cAA',{type:'line',data:{labels:labels,datasets:ds},
     options:{layout:{padding:{top:24,right:10,left:4}},interaction:{mode:'index',intersect:false},
@@ -2203,12 +2241,13 @@ function pintaAnioAnio(M,d1,d2,marca){
     prev=i;
   });
   document.getElementById('tAA').innerHTML=filas||'<tr><td colspan="5">Todavía no hay dos años para comparar.</td></tr>';
-  const vent=w?('Cada año medido en el mismo tramo del filtro, <b>'+w.a.slice(3)+'/'+w.a.slice(0,2)+' al '+w.b.slice(3)+'/'+w.b.slice(0,2)+'</b>.')
-             :'Cada año completo, de enero a diciembre.';
+  const vent=(wG?('Cada año medido en el mismo tramo, <b>'+wG.a.slice(3)+'/'+wG.a.slice(0,2)+' al '+wG.b.slice(3)+'/'+wG.b.slice(0,2)+'</b>.')
+             :'Cada año completo, de enero a diciembre.')+
+             (GA.fin?' El mes en curso va hasta el '+ddmmaa(GA.fin)+'.':'');
   const sMar=marca?(' Solo '+nmar(marca)+', así que no entran las boletas anteriores al 19/06/2026.'):'';
   document.getElementById('aacph').innerHTML='Una línea por año, mes a mes. '+vent+sMar;
   const pt=document.getElementById('phAAt');
-  if(pt)pt.innerHTML=comunes.length?('Compara solo <b>'+tramo+'</b>, que son los meses con ventas en todos los años; comparar un año completo contra medio año no diría nada.')
+  if(pt)pt.innerHTML=comunes.length?('Compara solo <b>'+tramo+'</b>, que son los meses con ventas en todos los años; comparar un año completo contra medio año no diría nada.'+(GA.fin?' Llega hasta el último mes cerrado.':''))
                                    :'Hace falta más de un año con ventas en el tramo elegido.';
   const pe=document.getElementById('phEst');
   if(pe)pe.innerHTML='Promedio de ingreso por mes juntando los años disponibles'+(w?', dentro del tramo del filtro':'')+'. Sirve para saber cuándo abastecer la tienda.';
@@ -4401,7 +4440,7 @@ var TND={
     var res=[{titulo:'Indicadores del período — '+lbl,nota:'Mismos números que las tarjetas de la pantalla, con el filtro puesto'+(fm?' (solo '+fmTxt+')':'')+'.',
       columnas:[{campo:'k',titulo:'Indicador',tipo:'texto'},{campo:'m',titulo:'Soles',tipo:'moneda'},{campo:'e',titulo:'Prendas',tipo:'entero'},{campo:'p',titulo:'Porcentaje',tipo:'porcentaje'},{campo:'n',titulo:'Cómo se calcula',tipo:'texto'}],filas:kpi}];
     /* Ingresos en el tiempo: misma agrupación elegida en pantalla */
-    var G=agrupaM(M,F);
+    var G=agrupaM(M,(typeof fechasTend==='function')?fechasTend(fechas):F);
     res.push({titulo:'Ingresos en el tiempo (por '+G.nom+')',columnas:[{campo:'t',titulo:G.nom.charAt(0).toUpperCase()+G.nom.slice(1),tipo:'texto'},{campo:'v',titulo:'Ingresos',tipo:'moneda'}],
       filas:G.labTxt.map(function(t,i){return {t:t,v:G.val[i]};})});
     /* Dónde está la plata: tipo de prenda, igual que el panel de inicio (todo el historial) */
@@ -4424,10 +4463,12 @@ var TND={
     /* Año contra año: cada año en la misma ventana de días del filtro, como en pantalla */
     var wA=(typeof ventanaAnual==='function')?ventanaAnual(desde,hasta):null;
     var mes={};Object.keys(M).forEach(function(f){if(TOPE&&f>TOPE)return;if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
+    var finAA='';
+    if(typeof mesesAAGraf==='function'){var GAx=mesesAAGraf(M,desde,hasta);wA=GAx.w;finAA=GAx.fin;mes={};Object.keys(GAx.mes).forEach(function(k){mes[k]={i:GAx.mes[k]};});}
     var anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
     var colAA=[{campo:'m',titulo:'Mes',tipo:'texto'}].concat(anios.map(function(a){return {campo:'a'+a,titulo:'Ingresos '+a,tipo:'moneda'};}));
     var filAA=MES.map(function(nm,k){var o={m:nm.charAt(0).toUpperCase()+nm.slice(1)},hay=false;anios.forEach(function(a){var x=mes[a+'-'+('0'+(k+1)).slice(-2)];o['a'+a]=x?x.i:null;if(x)hay=true;});return hay?o:null;}).filter(Boolean);
-    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año'+(wA?', midiendo cada año en el mismo tramo del filtro ('+wA.a.slice(3)+'/'+wA.a.slice(0,2)+' al '+wA.b.slice(3)+'/'+wA.b.slice(0,2)+')':'')+'. El año en curso llega hasta el último mes cerrado.',columnas:colAA,filas:filAA});
+    res.push({titulo:'Año contra año',nota:'Ingresos de cada mes calendario por año'+(wA?', midiendo cada año en el mismo tramo del filtro ('+wA.a.slice(3)+'/'+wA.a.slice(0,2)+' al '+wA.b.slice(3)+'/'+wA.b.slice(0,2)+')':'')+(finAA?'. El mes en curso va hasta el '+dmy(finAA)+'.':'. El año en curso llega hasta el último mes cerrado.'),columnas:colAA,filas:filAA});
     /* Clientes y tickets: ticket y prendas por boleta por mes (solo meses con boletas) */
     var mb={};F.forEach(function(f){if(!M[f]||!M[f].b)return;var k=f.slice(0,7);if(!mb[k])mb[k]={i:0,u:0,b:0};mb[k].i+=M[f].i;mb[k].u+=M[f].u;mb[k].b+=M[f].b;});
     var ks=Object.keys(mb).sort();
