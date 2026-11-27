@@ -1078,6 +1078,11 @@ align-items:center;justify-content:center;gap:18px;text-align:center;padding:24p
                 <div><div class="t1">Precio exclusivo</div>
                 <div class="t2">30 % de descuento. Se puede activar para cualquiera de los tres.</div></div>
               </div>
+              <div class="exclu" id="campa" onclick="toggleCampana()">
+                <div class="sw2"><span></span></div>
+                <div><div class="t1">Precio de campaña</div>
+                <div class="t2">50 % de descuento. Se puede activar para cualquiera de los tres.</div></div>
+              </div>
               <div class="exclu pla" id="planilla" onclick="togglePlanilla()" style="display:none">
                 <div class="sw2"><span></span></div>
                 <div><div class="t1">Descuento por planilla</div>
@@ -1654,7 +1659,7 @@ function pedirVendedora(falta){
 /* ================= estado ================= */
 let MAR=[],CAT=[],EST=[],COL=[],TAL=[],SKU={},VENTAS=[],FECHAS=[];
 const NCAT={},NMAR={},NEST={},NCOL={};
-let modo='Publico',exclusivo=false,colab=false,planilla=false,tokenVenta='';
+let modo='Publico',exclusivo=false,colab=false,campana=false,planilla=false,tokenVenta='';
 /* TQ = cantidad por talla de la prenda que se está marcando; pMan = precio escrito a mano (null = automático). */
 let TQ={},SCO=[],pMan=null;
 let sel={ma:null,ca:null,es:null,co:null,ta:null},CART=[],HOY=[],per='tienda',gran='dia',
@@ -1954,8 +1959,11 @@ function togCol(co){
    30 %, los dos para cualquiera de los tres tipos de cliente. No se suman: al prender
    uno se apaga el otro. Sin interruptor se cobra el precio de lista. Solo valen los
    interruptores: el precio ya no se escribe a mano al vender (sí en Corregir). La venta viaja con "preferencial" para que la base acepte el
-   precio rebajado también al Público (la variable se sigue llamando colab). */
-function pctAuto(){return exclusivo?30:(colab?10:0);}
+   precio rebajado también al Público (la variable se sigue llamando colab).
+   "Precio de campaña" 50 % (decisión de Christian, 27/11/2026): tercer interruptor, con
+   las mismas reglas; a la base viaja también como "preferencial" (no cambió la base). */
+function pctAuto(){return campana?50:(exclusivo?30:(colab?10:0));}
+function nomDescuento(){return campana?'precio de campaña':(exclusivo?'precio exclusivo':'precio preferencial');}
 function precioAuto(lista){return Math.round(lista*(100-pctAuto()))/100;}
 function prendaNueva(){sel={ma:null,ca:null,es:null,co:null,ta:null};TQ={};SCO=[];pMan=null;fcol='';pintaPasos();}
 /* Ordena los colores por tono: primero los neutros de claro a oscuro,
@@ -2049,8 +2057,8 @@ function calcTot(){
   const n=document.getElementById('qnota');
   if(!n||!(x.lista>0))return;
   const pa=pctAuto();
-  if(pa)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % ('+(exclusivo?'precio exclusivo':'precio preferencial')+')</span>.';
-  else n.innerHTML='Precio de lista, sin descuento. Para descontar active <b>Precio preferencial</b> (10 %) o <b>Precio exclusivo</b> (30 %).';
+  if(pa)n.innerHTML='Precio de lista '+S(x.lista)+' · <span class="desc">descuento '+pa+' % ('+nomDescuento()+')</span>.';
+  else n.innerHTML='Precio de lista, sin descuento. Para descontar active <b>Precio preferencial</b> (10 %), <b>Precio exclusivo</b> (30 %) o <b>Precio de campaña</b> (50 %).';
 }
 function agregar(){
   const n=totTallas();
@@ -2333,7 +2341,7 @@ async function cobrar(){
     const pagoUsado=planilla?'Descuento por planilla':document.getElementById('pago').value;
     const r=await api({action:'venta',token:tokenVenta,items:items,pago:pagoUsado,
                        usuario:document.getElementById('usuario').value,
-                       tipo:modo,exclusivo:exclusivo,preferencial:colab,
+                       tipo:modo,exclusivo:exclusivo,preferencial:(colab||campana),
                        cliente:vCli('vNom'),dni:vCli('vDni'),celular:vCli('vCel'),correo:vCli('vMail')});
     if(!r.ok)throw new Error(r.error||'El servidor rechazó la venta');
     const f=hoyISO();
@@ -2349,6 +2357,7 @@ async function cobrar(){
     pintaCart();pintaHoy();
     exclusivo=false;document.getElementById('exclu').className='exclu';
     colab=false;document.getElementById('colab').className='exclu';
+    campana=false;document.getElementById('campa').className='exclu';
     planilla=false;document.getElementById('planilla').className='exclu pla';
     limpiaCliVenta();
     setModo('Publico');       /* nada se queda pegado para el próximo cliente */
@@ -2489,7 +2498,7 @@ async function buscaDniVenta(){
     resumenCli();
   }catch(err){hint.textContent='No se pudo buscar. Escriba los datos a mano.';}
 }
-function puedeRebajar(){return modo!=='Publico'||exclusivo||colab;}
+function puedeRebajar(){return modo!=='Publico'||exclusivo||colab||campana;}
 function setModo(m){
   modo=m;
   document.querySelectorAll('#modos button').forEach(function(b,i){
@@ -2506,18 +2515,28 @@ function togglePlanilla(){
   document.getElementById('planilla').className='exclu pla'+(planilla?' on':'');
   refrescaModo();
 }
-function toggleColab(){
-  colab=!colab;
-  if(colab)exclusivo=false;
+/* Los tres descuentos no se suman: al prender uno se apagan los otros dos. */
+function pintaDescuentos(){
   document.getElementById('colab').className='exclu'+(colab?' on':'');
   document.getElementById('exclu').className='exclu'+(exclusivo?' on':'');
+  document.getElementById('campa').className='exclu'+(campana?' on':'');
+}
+function toggleColab(){
+  colab=!colab;
+  if(colab){exclusivo=false;campana=false;}
+  pintaDescuentos();
   refrescaModo();
 }
 function toggleExclusivo(){
   exclusivo=!exclusivo;
-  if(exclusivo)colab=false;
-  document.getElementById('colab').className='exclu'+(colab?' on':'');
-  document.getElementById('exclu').className='exclu'+(exclusivo?' on':'');
+  if(exclusivo){colab=false;campana=false;}
+  pintaDescuentos();
+  refrescaModo();
+}
+function toggleCampana(){
+  campana=!campana;
+  if(campana){colab=false;exclusivo=false;}
+  pintaDescuentos();
   refrescaModo();
 }
 function refrescaModo(){
@@ -2528,9 +2547,11 @@ function refrescaModo(){
   if(!pctAuto()){av.style.display='none';}
   else{
     av.style.display='';
-    av.className='avisomodo '+(exclusivo?'exc':'col');
+    av.className='avisomodo '+((exclusivo||campana)?'exc':'col');
     const quien=(modo==='Publico')?'cliente del público':(modo==='Empleado'?'empleado':'obrero');
-    av.textContent=exclusivo
+    av.textContent=campana
+      ? ('Precio de campaña para '+quien+': 50 % de descuento en cada prenda.')
+      : exclusivo
       ? ('Precio exclusivo para '+quien+': 30 % de descuento en cada prenda.')
       : ('Precio preferencial para '+quien+': 10 % de descuento en cada prenda.');
   }
