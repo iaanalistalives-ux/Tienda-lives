@@ -2183,33 +2183,32 @@ function ventanaAnual(d1,d2){
    resumen de abajo y la estacionalidad siguen hasta el último mes cerrado. Devuelve los
    ingresos por mes del gráfico, su ventana de días y hasta qué día llega ('' si no hay
    mes en curso que agregar). */
-function mesesAAGraf(M,d1,d2){
-  let fin='';
-  if(TOPE)Object.keys(M).forEach(function(f){if(f>TOPE&&(!TOPE_D2||f<=TOPE_D2)&&f>fin)fin=f;});
-  const w=ventanaAnual(d1,fin||d2),mes={};
+/* Desde el 27/11/2026 (decisión de Christian) Año contra año NO cambia con el filtro de
+   año, mes ni fechas: siempre salen todos los años con sus meses completos. Solo la marca
+   lo filtra. */
+function mesesAAGraf(M){
+  const c=cierreMes(),mes={};let fin='';
   Object.keys(M).forEach(function(f){
-    if(fin?f>fin:(TOPE&&f>TOPE))return;
-    if(w&&(f.slice(5)<w.a||f.slice(5)>w.b))return;
+    if(f>c&&f>fin)fin=f;
     const k=f.slice(0,7);mes[k]=(mes[k]||0)+M[f].i;
   });
-  return {w:w,mes:mes,fin:fin};
+  return {w:null,mes:mes,fin:fin};
 }
 function pintaAnioAnio(M,d1,d2,marca){
-  /* Cada año se mide en la MISMA ventana de días que el filtro (por ejemplo del
-     19/06 al 15/10 de cada año): comparar un año entero contra medio año no diría nada. */
-  const w=ventanaAnual(d1,d2);
+  /* Sin ventana de filtro (27/11/2026): cada año completo, de enero a diciembre. La tabla
+     y la estacionalidad llegan siempre hasta el último mes cerrado. */
+  const w=null,CM=cierreMes();
   const m1=w?parseInt(w.a.slice(0,2),10):1,m2=w?parseInt(w.b.slice(0,2),10):12;
   const mes={};
   Object.keys(M).forEach(function(f){
-    if(TOPE&&f>TOPE)return;
-    if(w&&(f.slice(5)<w.a||f.slice(5)>w.b))return;
+    if(f>CM)return;
     const k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};
     mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;
   });
   const anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
   const meses=[];for(let k=m1;k<=m2;k++)meses.push(('0'+k).slice(-2));
   /* el gráfico usa sus propios meses: llega al mes en curso */
-  const GA=mesesAAGraf(M,d1,d2),wG=GA.w;
+  const GA=mesesAAGraf(M),wG=GA.w;
   const g1=wG?parseInt(wG.a.slice(0,2),10):1,g2=wG?parseInt(wG.b.slice(0,2),10):12;
   const mesesG=[];for(let k=g1;k<=g2;k++)mesesG.push(('0'+k).slice(-2));
   const aniosG=Array.from(new Set(Object.keys(GA.mes).map(function(k){return k.slice(0,4);}))).sort();
@@ -2242,7 +2241,7 @@ function pintaAnioAnio(M,d1,d2,marca){
   });
   document.getElementById('tAA').innerHTML=filas||'<tr><td colspan="5">Todavía no hay dos años para comparar.</td></tr>';
   const vent=(wG?('Cada año medido en el mismo tramo, <b>'+wG.a.slice(3)+'/'+wG.a.slice(0,2)+' al '+wG.b.slice(3)+'/'+wG.b.slice(0,2)+'</b>.')
-             :'Cada año completo, de enero a diciembre.')+
+             :'Cada año completo, de enero a diciembre; no cambia con el filtro de fechas.')+
              (GA.fin?' El mes en curso va hasta el '+ddmmaa(GA.fin)+'.':'');
   const sMar=marca?(' Solo '+nmar(marca)+', así que no entran las boletas anteriores al 19/06/2026.'):'';
   document.getElementById('aacph').innerHTML='Una línea por año, mes a mes. '+vent+sMar;
@@ -4460,11 +4459,11 @@ var TND={
         columnas:[{campo:'k',titulo:'Tipo de prenda',tipo:'texto'},{campo:'u',titulo:'Prendas',tipo:'entero'},{campo:'i',titulo:'Ingresos',tipo:'moneda'},{campo:'p',titulo:'% del ingreso',tipo:'porcentaje'}],
         filas:fT});
     }
-    /* Año contra año: cada año en la misma ventana de días del filtro, como en pantalla */
-    var wA=(typeof ventanaAnual==='function')?ventanaAnual(desde,hasta):null;
-    var mes={};Object.keys(M).forEach(function(f){if(TOPE&&f>TOPE)return;if(wA&&(f.slice(5)<wA.a||f.slice(5)>wA.b))return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
+    /* Año contra año: todos los años completos, sin el filtro de fechas, como en pantalla */
+    var wA=null;
+    var mes={};Object.keys(M).forEach(function(f){if(f>cierreMes())return;var k=f.slice(0,7);if(!mes[k])mes[k]={i:0,u:0,b:0};mes[k].i+=M[f].i;mes[k].u+=M[f].u;mes[k].b+=M[f].b;});
     var finAA='';
-    if(typeof mesesAAGraf==='function'){var GAx=mesesAAGraf(M,desde,hasta);wA=GAx.w;finAA=GAx.fin;mes={};Object.keys(GAx.mes).forEach(function(k){mes[k]={i:GAx.mes[k]};});}
+    if(typeof mesesAAGraf==='function'){var GAx=mesesAAGraf(M);wA=GAx.w;finAA=GAx.fin;mes={};Object.keys(GAx.mes).forEach(function(k){mes[k]={i:GAx.mes[k]};});}
     var anios=Array.from(new Set(Object.keys(mes).map(function(k){return k.slice(0,4);}))).sort();
     var colAA=[{campo:'m',titulo:'Mes',tipo:'texto'}].concat(anios.map(function(a){return {campo:'a'+a,titulo:'Ingresos '+a,tipo:'moneda'};}));
     var filAA=MES.map(function(nm,k){var o={m:nm.charAt(0).toUpperCase()+nm.slice(1)},hay=false;anios.forEach(function(a){var x=mes[a+'-'+('0'+(k+1)).slice(-2)];o['a'+a]=x?x.i:null;if(x)hay=true;});return hay?o:null;}).filter(Boolean);
